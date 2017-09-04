@@ -3862,7 +3862,7 @@ int licenseToAdventureSocialCapitalAvailable()
 }
 
 
-string __genie_version = "1.0";
+string __genie_version = "1.0.1";
 //Comment to allow file_to_map() to see this file:
 //Choice	override
 
@@ -3870,7 +3870,7 @@ boolean [string] __numeric_modifier_names = $strings[Familiar Weight,Monster Lev
 
 
 boolean [monster] __genie_invalid_monsters = $monsters[ninja snowman assassin];
-boolean [effect] __genie_invalid_effects = $effects[jukebox hero,Juicy Boost,Meteor Showered,Steely-eyed squint,Blue Eyed Devil,Cereal Killer,Nearly All-Natural,Amazing,Throwing some shade,A rose by any other material,Gaze of the Gazelle,East of Eaten,Robot Friends,Smart Drunk,Margamergency,Pajama Party,Rumpel-Pumped,Song of Battle,Song of Solitude,Buy!\  Sell!\  Buy!\  Sell!,eldritch attunement,The Inquisitor's unknown effect,Filthworm Drone Stench,Filthworm Guard Stench,Filthworm Larva Stench,Green Peace,Red Menace,Video... Games?,things man was not meant to eat,Whitesloshed,thrice-cursed,bendin' hell]; //'
+boolean [effect] __genie_invalid_effects = $effects[jukebox hero,Juicy Boost,Meteor Showered,Steely-eyed squint,Blue Eyed Devil,Cereal Killer,Nearly All-Natural,Amazing,Throwing some shade,A rose by any other material,Gaze of the Gazelle,East of Eaten,Robot Friends,Smart Drunk,Margamergency,Pajama Party,Rumpel-Pumped,Song of Battle,Song of Solitude,Buy!\  Sell!\  Buy!\  Sell!,eldritch attunement,The Inquisitor's unknown effect,Filthworm Drone Stench,Filthworm Guard Stench,Filthworm Larva Stench,Green Peace,Red Menace,Video... Games?,things man was not meant to eat,Whitesloshed,thrice-cursed,bendin' hell,Synthesis: Hot,Synthesis: Cold,Synthesis: Pungent,Synthesis: Scary,Synthesis: Greasy,Synthesis: Strong,Synthesis: Smart,Synthesis: Cool,Synthesis: Hardy,Synthesis: Energy,Synthesis: Greed,Synthesis: Collection,Synthesis: Movement,Synthesis: Learning,Synthesis: Style,The Good Salmonella,Giant Growth]; //'
 
 
 monster [int] genieGenerateValidMonsterList()
@@ -3963,6 +3963,7 @@ effect [int] genieGenerateValidEffectList()
 	foreach key, e in early_effect_order
 	{
 		if (out_effects[e]) continue;
+		if (__genie_invalid_effects[e]) continue;
 		out.listAppend(e);
 		out_effects[e] = true;
 	}
