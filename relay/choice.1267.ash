@@ -3862,7 +3862,7 @@ int licenseToAdventureSocialCapitalAvailable()
 }
 
 
-string __genie_version = "1.1.1";
+string __genie_version = "1.1.2";
 //Comment to allow file_to_map() to see this file:
 //Choice	override
 
@@ -4318,7 +4318,7 @@ buffer genieGenerateHardcodedWishes()
 	//Hardcoded wishes:
 	out.append("<div style=\"display:table;width:100%;\"><div style=\"display:table-row;\">");
 	
-	out.append(generateButton(MIN(50000, my_level() * 500) + " meat", "be_rich_button", true, "to be rich", "itemimages/meat.gif"));
+	out.append(generateButton(MIN(50000, my_level() * 500) + " meat", "be_rich_button", true, "for more meat", "itemimages/meat.gif"));
 	out.append(generateButton("A pony", "pony_button", true, "for a pony", "itemimages/pony1.gif"));
 	out.append(generateButton("Pocket wish", "pocket_wish_button", true, "for more wishes", "itemimages/whitecard.gif"));
 	out.append("</div><div style=\"display:table-row;\">");

@@ -1805,7 +1805,7 @@ element get_property_element(string property)
 }
 
 
-string __genie_version = "1.1.1";
+string __genie_version = "1.1.2";
 
 string removeFirstWord(string line)
 {
@@ -1838,7 +1838,7 @@ void main(string arguments)
 	string wish;
 	if (arguments == "rich" || arguments == "meat")
 	{
-		wish = "to be rich";
+		wish = "for more meat";
 	}
 	if (arguments == "pony")
 	{
