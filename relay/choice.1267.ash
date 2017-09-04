@@ -3862,15 +3862,24 @@ int licenseToAdventureSocialCapitalAvailable()
 }
 
 
-string __genie_version = "1.1";
+string __genie_version = "1.1.1";
 //Comment to allow file_to_map() to see this file:
 //Choice	override
 
 boolean [string] __numeric_modifier_names = $strings[Familiar Weight,Monster Level,Combat Rate,Initiative,Experience,Item Drop,Meat Drop,Damage Absorption,Damage Reduction,Cold Resistance,Hot Resistance,Sleaze Resistance,Spooky Resistance,Stench Resistance,Mana Cost,Moxie,Moxie Percent,Muscle,Muscle Percent,Mysticality,Mysticality Percent,Maximum HP,Maximum HP Percent,Maximum MP,Maximum MP Percent,Weapon Damage,Ranged Damage,Spell Damage,Spell Damage Percent,Cold Damage,Hot Damage,Sleaze Damage,Spooky Damage,Stench Damage,Cold Spell Damage,Hot Spell Damage,Sleaze Spell Damage,Spooky Spell Damage,Stench Spell Damage,Underwater Combat Rate,Fumble,HP Regen Min,HP Regen Max,MP Regen Min,MP Regen Max,Adventures,Familiar Weight Percent,Weapon Damage Percent,Ranged Damage Percent,Stackable Mana Cost,Hobo Power,Base Resting HP,Resting HP Percent,Bonus Resting HP,Base Resting MP,Resting MP Percent,Bonus Resting MP,Critical Hit Percent,PvP Fights,Volleyball,Sombrero,Leprechaun,Fairy,Meat Drop Penalty,Hidden Familiar Weight,Item Drop Penalty,Initiative Penalty,Food Drop,Booze Drop,Hat Drop,Weapon Drop,Offhand Drop,Shirt Drop,Pants Drop,Accessory Drop,Volleyball Effectiveness,Sombrero Effectiveness,Leprechaun Effectiveness,Fairy Effectiveness,Familiar Weight Cap,Slime Resistance,Slime Hates It,Spell Critical Percent,Muscle Experience,Mysticality Experience,Moxie Experience,Effect Duration,Candy Drop,DB Combat Damage,Sombrero Bonus,Familiar Experience,Sporadic Meat Drop,Sporadic Item Drop,Meat Bonus,Pickpocket Chance,Combat Mana Cost,Muscle Experience Percent,Mysticality Experience Percent,Moxie Experience Percent,Minstrel Level,Muscle Limit,Mysticality Limit,Moxie Limit,Song Duration,Prismatic Damage,Smithsness,Supercold Resistance,Reduce Enemy Defense,Pool Skill,Surgeonosity];
 
 
-boolean [monster] __genie_invalid_monsters = $monsters[ninja snowman assassin];
-boolean [effect] __genie_invalid_effects = $effects[jukebox hero,Juicy Boost,Meteor Showered,Steely-eyed squint,Blue Eyed Devil,Cereal Killer,Nearly All-Natural,Amazing,Throwing some shade,A rose by any other material,Gaze of the Gazelle,East of Eaten,Robot Friends,Smart Drunk,Margamergency,Pajama Party,Rumpel-Pumped,Song of Battle,Song of Solitude,Buy!\  Sell!\  Buy!\  Sell!,eldritch attunement,The Inquisitor's unknown effect,Filthworm Drone Stench,Filthworm Guard Stench,Filthworm Larva Stench,Green Peace,Red Menace,Video... Games?,things man was not meant to eat,Whitesloshed,thrice-cursed,bendin' hell,Synthesis: Hot,Synthesis: Cold,Synthesis: Pungent,Synthesis: Scary,Synthesis: Greasy,Synthesis: Strong,Synthesis: Smart,Synthesis: Cool,Synthesis: Hardy,Synthesis: Energy,Synthesis: Greed,Synthesis: Collection,Synthesis: Movement,Synthesis: Learning,Synthesis: Style,The Good Salmonella,Giant Growth]; //'
+
+
+
+
+
+
+
+boolean [monster] __genie_invalid_monsters = $monsters[ninja snowman assassin,modern zmobie,swarm of ghuol whelps];
+
+
+boolean [effect] __genie_invalid_effects = $effects[jukebox hero,Juicy Boost,Meteor Showered,Steely-eyed squint,Blue Eyed Devil,Cereal Killer,Nearly All-Natural,Amazing,Throwing some shade,A rose by any other material,Gaze of the Gazelle,East of Eaten,Robot Friends,Smart Drunk,Margamergency,Pajama Party,Rumpel-Pumped,Song of Battle,Song of Solitude,Buy!\  Sell!\  Buy!\  Sell!,eldritch attunement,The Inquisitor's unknown effect,Filthworm Drone Stench,Filthworm Guard Stench,Filthworm Larva Stench,Green Peace,Red Menace,Video... Games?,things man was not meant to eat,Whitesloshed,thrice-cursed,bendin' hell,Synthesis: Hot,Synthesis: Cold,Synthesis: Pungent,Synthesis: Scary,Synthesis: Greasy,Synthesis: Strong,Synthesis: Smart,Synthesis: Cool,Synthesis: Hardy,Synthesis: Energy,Synthesis: Greed,Synthesis: Collection,Synthesis: Movement,Synthesis: Learning,Synthesis: Style,The Good Salmonella,Giant Growth,Lovebotamy,Open Heart Surgery,Wandering Eye Surgery,gar-ish,Puissant Pressure,Perspicacious Pressure,Pulchritudinous Pressure]; //'
 
 
 int bestModForTableCount(int count)
@@ -4247,7 +4256,8 @@ buffer genieGenerateDropdowns()
 		monster_ids[key] = m.manuel_name;
 		
 		string image = "images/" + imageFromMonster(m);
-		monster_replacement_images[key] = image;
+		if (m != $monster[none])
+			monster_replacement_images[key] = image;
 	}
 	out.append(generateSelectionDropdown(monster_descriptions, monster_ids, monster_replacement_images, "monster_selection_div"));
 	out.append("</div><div style=\"display:table-cell;\">");
@@ -4389,6 +4399,14 @@ buffer genieGenerateNextEffectWishes()
 		modifier_buttons.listAppend(ModifierButtonEntryMake("familiar weight", "familiar weight", 0, false, "itemimages/blackcat.gif"));
 	modifier_buttons.listAppend(ModifierButtonEntryMake("init", "initiative", 0, true, "itemimages/fast.gif"));
 	modifier_buttons.listAppend(ModifierButtonEntryMake("ML", "Monster Level", 0, false, "itemimages/skinknife.gif"));
+	
+	boolean [string] prismatic_damage_modifiers;
+	foreach e in $elements[hot,stench,spooky,cold,sleaze]
+	{
+		prismatic_damage_modifiers[e + " Damage"] = true;
+		prismatic_damage_modifiers[e + " Spell Damage"] = true;
+	}
+	modifier_buttons.listAppend(ModifierButtonEntryMake("Prismatic dmg", prismatic_damage_modifiers, 0, false, "itemimages/rrainbow.gif"));
 	modifier_buttons.listAppend(ModifierButtonEntryMake("HP", "Maximum HP Percent", 1, true, "itemimages/strboost.gif"));
 	modifier_buttons.listAppend(ModifierButtonEntryMake("HP", "Maximum HP", 1, false, "itemimages/strboost.gif"));
 	if (my_primestat() == $stat[muscle])

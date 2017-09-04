@@ -76,6 +76,7 @@ function genieSelectionChanged(div_id)
 	new_image_src = option_div.getAttribute("data-replacement-image");
 	
 	//new_image_src = "images/otherimages/witchywoman.gif";
-	if (new_image_src.length > 0)
-		document.getElementById("genie_image").src = new_image_src;
+	if (new_image_src == undefined || new_image_src.length == 0)
+		new_image_src = "images/otherimages/genie_happy.gif";
+	document.getElementById("genie_image").src = new_image_src;
 }
