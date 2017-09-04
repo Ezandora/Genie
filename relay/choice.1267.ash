@@ -3862,7 +3862,7 @@ int licenseToAdventureSocialCapitalAvailable()
 }
 
 
-string __genie_version = "1.0.1";
+string __genie_version = "1.0.2";
 //Comment to allow file_to_map() to see this file:
 //Choice	override
 
@@ -3951,6 +3951,7 @@ effect [int] genieGenerateValidEffectList()
 	sort second_pass_effects by value.to_string().to_lower_case();
 	
 	effect [int] early_effect_order;
+	early_effect_order.listAppend($effect[Frosty]);
 	early_effect_order.listAppend($effect[sinuses for miles]);
 	early_effect_order.listAppend($effect[Synthesis: Collection]);
 	early_effect_order.listAppend($effect[Of Course It Looks Great]);
@@ -4299,6 +4300,7 @@ buffer genieGenerateNextEffectWishes()
 		boolean is_percent = true;
 		if (description == "familiar weight" || description == "ML")
 			is_percent = false;
+		float best_effect_score = 0.0;
 		float best_effect_value = 0.0;
 		effect best_effect = $effect[none];
 		foreach e in valid_effects
@@ -4309,16 +4311,26 @@ buffer genieGenerateNextEffectWishes()
 				should_be_negative = true;
 			if (e.have_effect() > 0) continue;
 			float value = e.numeric_modifier(modifier); //FIXME muscle/myst/etc
+			
+			float score = value;
+			foreach s in $strings[Item Drop,Meat Drop]
+			{
+				if (s == modifier) continue;
+				score += e.numeric_modifier(s) / 100.0;
+			}
+			
 			if (should_be_negative)
 			{
-				if (value < best_effect_value)
+				if (score < best_effect_score)
 				{
+					best_effect_score = score;
 					best_effect_value = value;
 					best_effect = e;
 				}
 			}
-			else if (value > best_effect_value)
+			else if (score > best_effect_score)
 			{
+				best_effect_score = score;
 				best_effect_value = value;
 				best_effect = e;
 			}
@@ -4360,7 +4372,8 @@ buffer genieGenerateSecondaryHardcodedWishes()
 		desired_effects[$effect[Beer Barrel Polka]] = true;
 		effect_descriptions[$effect[Beer Barrel Polka]] = "more adv from booze";
 	}
-	desired_effects[$effect[Inigo's Incantation of Inspiration]] = true; //'
+	if (!($skill[Inigo's Incantation of Inspiration].have_skill() && $skill[Inigo's Incantation of Inspiration].is_unrestricted() && $effect[Inigo's Incantation of Inspiration].have_effect() == 0)) //'
+		desired_effects[$effect[Inigo's Incantation of Inspiration]] = true; //'
 	effect_descriptions[$effect[Inigo's Incantation of Inspiration]] = "craft for free"; //'
 	
 	
