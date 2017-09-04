@@ -3862,7 +3862,7 @@ int licenseToAdventureSocialCapitalAvailable()
 }
 
 
-string __genie_version = "1.0.2";
+string __genie_version = "1.1";
 //Comment to allow file_to_map() to see this file:
 //Choice	override
 
@@ -3872,6 +3872,27 @@ boolean [string] __numeric_modifier_names = $strings[Familiar Weight,Monster Lev
 boolean [monster] __genie_invalid_monsters = $monsters[ninja snowman assassin];
 boolean [effect] __genie_invalid_effects = $effects[jukebox hero,Juicy Boost,Meteor Showered,Steely-eyed squint,Blue Eyed Devil,Cereal Killer,Nearly All-Natural,Amazing,Throwing some shade,A rose by any other material,Gaze of the Gazelle,East of Eaten,Robot Friends,Smart Drunk,Margamergency,Pajama Party,Rumpel-Pumped,Song of Battle,Song of Solitude,Buy!\  Sell!\  Buy!\  Sell!,eldritch attunement,The Inquisitor's unknown effect,Filthworm Drone Stench,Filthworm Guard Stench,Filthworm Larva Stench,Green Peace,Red Menace,Video... Games?,things man was not meant to eat,Whitesloshed,thrice-cursed,bendin' hell,Synthesis: Hot,Synthesis: Cold,Synthesis: Pungent,Synthesis: Scary,Synthesis: Greasy,Synthesis: Strong,Synthesis: Smart,Synthesis: Cool,Synthesis: Hardy,Synthesis: Energy,Synthesis: Greed,Synthesis: Collection,Synthesis: Movement,Synthesis: Learning,Synthesis: Style,The Good Salmonella,Giant Growth]; //'
 
+
+int bestModForTableCount(int count)
+{
+	int best_mod = 3;
+	int best_lines = -1;
+	for i from 2 to 5
+	{
+		int lines = ceil(to_float(count) / to_float(i));
+		if (lines < best_lines || best_lines == -1)
+		{
+			best_mod = i;
+			best_lines = lines;
+		}
+		/*if (count % i == 0)
+		{
+			best_mod = i;
+			best_lines = lines;
+		}*/
+	}
+	return best_mod;
+}
 
 monster [int] genieGenerateValidMonsterList()
 {
@@ -3891,6 +3912,7 @@ monster [int] genieGenerateValidMonsterList()
 	
 	early_monster_order.listAppend($monster[ghost]);
 	
+	early_monster_order.listAppend($monster[black crayon crimbo elf]);
 	
 	
 	
@@ -4003,18 +4025,27 @@ effect [int] genieGenerateValidAvatarList()
 	return out;
 }
 
-buffer generateSelectionDropdown(string [int] descriptions, string [int] ids, string selection_div_id)
+buffer generateSelectionDropdown(string [int] descriptions, string [int] ids, string [int] replacement_images, string selection_div_id)
 {
 	int text_limit = 50;
 	buffer out;
-	out.append("<select id=\"" + selection_div_id + "\" style=\"width:100%;\">");
+	out.append("<select id=\"" + selection_div_id + "\" style=\"width:100%;\" onchange=\"genieSelectionChanged('" + selection_div_id + "');\">");
 	out.append("<option value=\"-1\"></option>");
 	foreach key in descriptions
 	{
 		out.append("<option value=\"");
 		//out.append(ids[key].replace_string("\"", "\\\""));
 		out.append(ids[key].replace_string("\"", ""));
-		out.append("\">");
+		out.append("\"");
+		string replacement_image = replacement_images[key];
+		if (replacement_image != "")
+		{
+			out.append(" data-replacement-image=\"");
+			out.append(replacement_image);
+			//out.append("images/otherimages/witchywoman.gif");
+			out.append("\"");
+		}
+		out.append(">");
 		
 		string description = descriptions[key];
 		
@@ -4027,17 +4058,25 @@ buffer generateSelectionDropdown(string [int] descriptions, string [int] ids, st
 	return out;
 }
 
-buffer generateButton(string text, string id, boolean make_table_cell, string command)
+buffer generateButton(string text, string id, boolean make_table_cell, string command, string image)
 {
+	boolean use_divs = true;
 	buffer out;
-	if (make_table_cell)
-		out.append("<div style=\"display:table-cell;\">");
-	out.append("<button style=\"");
-	if (make_table_cell)
-		out.append("width:100%;");
-	if (make_table_cell && false)
-		out.append("display:table-cell;");
+	
+	boolean inline_image_cells = false; //make_table_cell && image != "";
+	
+	if (make_table_cell && !use_divs)
+		out.append("<div style=\"display:table-cell;vertical-align:middle;\">");
+	if (use_divs)
+		out.append("<div");
 	else
+		out.append("<button");
+	out.append(" style=\"");
+	if (make_table_cell && !use_divs)
+		out.append("width:100%;");
+	if (make_table_cell && use_divs)
+		out.append("display:table-cell;");
+	else if (!make_table_cell)
 		out.append("display:inline-block;");
 	out.append("\" class=\"button\"");
 	if (id != "")
@@ -4063,18 +4102,57 @@ buffer generateButton(string text, string id, boolean make_table_cell, string co
 		out.append("\"");
 	}
 	out.append(">");
+	
+	if (image != "")
+	{
+		//margin-left:auto;margin-right:auto;
+		if (!inline_image_cells)
+			out.append("<div style=\"display:table;\"><div style=\"display:table-row;\">");
+		out.append("<div style=\"display:table-cell;vertical-align:middle;\">");
+		out.append("<img src=\"images/" + image + "\" style=\"mix-blend-mode:multiply;\" width=30 height=30>");
+		out.append("</div><div style=\"display:table-cell;vertical-align:middle;padding-left:2px;\">");
+	}
 	out.append(text);
-	out.append("</button>");
-	if (make_table_cell)
+	if (image != "")
+	{
+		out.append("</div>");
+		if (!inline_image_cells)
+			out.append("</div></div>");
+	}
+	if (use_divs)
+		out.append("</div>");
+	else
+		out.append("</button>");
+	if (make_table_cell && !use_divs)
 		out.append("</div>");
 	return out;
 }
-
+buffer generateButton(string text, string id, boolean make_table_cell, string command)
+{
+	return generateButton(text, id, make_table_cell, "", "");
+}
 buffer generateButton(string text, string id, boolean make_table_cell)
 {
 	return generateButton(text, id, make_table_cell, "");
 }
 
+
+string genericiseImageString(string image)
+{
+	return image.replace_string("https://s3.amazonaws.com/images.kingdomofloathing.com/", "");
+}
+string imageFromItem(item it)
+{
+	return genericiseImageString((it.image.contains_text("s3.amazon") ? "" : "itemimages/") + it.image);
+}
+string imageFromEffect(effect e)
+{
+	return genericiseImageString(e.image);
+}
+string imageFromMonster(monster m)
+{
+	return genericiseImageString((m.image.contains_text("s3.amazon") ? "" : "adventureimages/") + m.image);
+}
 
 boolean [string] __effect_descriptions_modifier_is_percent;
 string [string] __effect_descriptions_modifier_short_description_mapping;
@@ -4159,50 +4237,63 @@ buffer genieGenerateDropdowns()
 	out.append("<div style=\"display:table-cell;\">");
 	string [int] monster_descriptions;
 	string [int] monster_ids;
+	string [int] monster_replacement_images;
 	foreach key, m in genieGenerateValidMonsterList()
 	{
 		if (m == $monster[none])
-			monster_descriptions.listAppend("-------------");
+			monster_descriptions[key] = "-------------";
 		else
-			monster_descriptions.listAppend(m);
-		monster_ids.listAppend(m.manuel_name);
+			monster_descriptions[key] = m;
+		monster_ids[key] = m.manuel_name;
+		
+		string image = "images/" + imageFromMonster(m);
+		monster_replacement_images[key] = image;
 	}
-	out.append(generateSelectionDropdown(monster_descriptions, monster_ids, "monster_selection_div"));
+	out.append(generateSelectionDropdown(monster_descriptions, monster_ids, monster_replacement_images, "monster_selection_div"));
 	out.append("</div><div style=\"display:table-cell;\">");
 	out.append(generateButton("Go", "monster_selection_button", false));
 	out.append("</div></div><div style=\"display:table-row\">");
 	
 	string [int] effect_descriptions;
 	string [int] effect_ids;
+	string [int] blank;
 	foreach key, e in genieGenerateValidEffectList()
 	{
 		if (e == $effect[none])
-			effect_descriptions.listAppend("-------------");
+			effect_descriptions[key] = "-------------";
 		else
-			effect_descriptions.listAppend(genieGenerateEffectDescription(e));
-		effect_ids.listAppend(e);
+			effect_descriptions[key] = genieGenerateEffectDescription(e);
+		effect_ids[key] = e;
 	}
 	
 	out.append("<div style=\"display:table-cell;padding-right:5px;\">For twenty turns of</div>");
 	out.append("<div style=\"display:table-cell;\">");
-	out.append(generateSelectionDropdown(effect_descriptions, effect_ids, "effect_selection_div"));
+	out.append(generateSelectionDropdown(effect_descriptions, effect_ids, blank, "effect_selection_div"));
 	out.append("</div><div style=\"display:table-cell;\">");
 	out.append(generateButton("Go", "effect_selection_button", false));
 	out.append("</div></div><div style=\"display:table-row\">");
 	
 	string [int] avatar_descriptions;
 	string [int] avatar_ids;
+	string [int] avatar_replacement_images;
 	foreach key, e in genieGenerateValidAvatarList()
 	{
 		if (e == $effect[none])
-			avatar_descriptions.listAppend("-------------");
+			avatar_descriptions[key] = "-------------";
 		else
-			avatar_descriptions.listAppend(e.string_modifier("Avatar"));
-		avatar_ids.listAppend(e);
+			avatar_descriptions[key] = e.string_modifier("Avatar");
+		avatar_ids[key] = e;
+		
+		monster m = e.string_modifier("Avatar").to_monster();
+		if (m != $monster[none])
+		{
+			string image = "images/" + imageFromMonster(m);
+			avatar_replacement_images[key] = image;
+		}
 	}
 	out.append("<div style=\"display:table-cell;\">To look like a </div>");
 	out.append("<div style=\"display:table-cell;\">");
-	out.append(generateSelectionDropdown(avatar_descriptions, avatar_ids, "avatar_selection_div"));
+	out.append(generateSelectionDropdown(avatar_descriptions, avatar_ids, avatar_replacement_images, "avatar_selection_div"));
 	out.append("</div><div style=\"display:table-cell;\">");
 	out.append(generateButton("Go", "avatar_selection_button", false));
 	out.append("</div>");
@@ -4217,11 +4308,11 @@ buffer genieGenerateHardcodedWishes()
 	//Hardcoded wishes:
 	out.append("<div style=\"display:table;width:100%;\"><div style=\"display:table-row;\">");
 	
-	out.append(generateButton(MIN(50000, my_level() * 500) + " meat", "be_rich_button", true, "to be rich"));
-	out.append(generateButton("A pony", "pony_button", true, "for a pony"));
-	out.append(generateButton("Pocket wish", "pocket_wish_button", true, "for more wishes"));
+	out.append(generateButton(MIN(50000, my_level() * 500) + " meat", "be_rich_button", true, "to be rich", "itemimages/meat.gif"));
+	out.append(generateButton("A pony", "pony_button", true, "for a pony", "itemimages/pony1.gif"));
+	out.append(generateButton("Pocket wish", "pocket_wish_button", true, "for more wishes", "itemimages/whitecard.gif"));
 	out.append("</div><div style=\"display:table-row;\">");
-	out.append(generateButton("Fight the genie", "genie_button", true, "you were free"));
+	out.append(generateButton("Fight the genie", "genie_button", true, "you were free", "itemimages/gbottle_open.gif"));
 	
 	/*string mainstat_wish;
 	if (my_primestat() == $stat[muscle])
@@ -4232,12 +4323,13 @@ buffer genieGenerateHardcodedWishes()
 		mainstat_wish = "I was a baller";
 	if (mainstat_wish != "")
 		out.append(generateButton("Mainstat", "mainstat_button", true, mainstat_wish));*/
-	out.append(generateButton("All stats", "all_stats_button", true, "I were big"));
-	out.append(generateButton("Muscle stats", "muscle_button", true, "I was taller"));
+	out.append(generateButton("All stats", "all_stats_button", true, "I were big", "itemimages/dna.gif"));
+	out.append(generateButton("Muscle stats", "muscle_button", true, "I was taller", "itemimages/bigdumbbell.gif"));
 	out.append("</div><div style=\"display:table-row;\">");
-	out.append(generateButton("Mysticality stats", "mysticality_button", true, "I wish I had a rabbit in a hat with a bat"));
-	out.append(generateButton("Moxie stats", "moxie_button", true, "I was a baller"));
-	out.append(generateButton("Dragon mail", "", true, "for a blessed rustproof +2 gray dragon scale mail"));
+	out.append(generateButton("Mysticality stats", "mysticality_button", true, "I wish I had a rabbit in a hat with a bat", "itemimages/tinystars.gif"));
+	out.append(generateButton("Moxie stats", "moxie_button", true, "I was a baller", "itemimages/greaserint.gif"));
+	if (to_item("blessed rustproof +2 gray dragon scale mail").available_amount() == 0)
+		out.append(generateButton("Dragon mail", "", true, "for a blessed rustproof +2 gray dragon scale mail", "itemimages/envelope.gif"));
 	//blessed rustproof +2 gray dragon scale mail
 	//FIXME got milk, ode to booze, etc
 	out.append("</div>"); //table-row
@@ -4250,30 +4342,86 @@ buffer genieGenerateNextEffectWishes()
 {
 	buffer out;
 	
+	Record ModifierButtonEntry
+	{
+		string display_name;
+		boolean [string] modifiers;
+		int set;
+		boolean is_percent;
+		string image;
+	};
+	ModifierButtonEntry ModifierButtonEntryMake(string display_name, boolean [string] modifiers, int set, boolean is_percent, string image)
+	{
+		ModifierButtonEntry entry;
+		entry.display_name = display_name;
+		entry.modifiers = modifiers;
+		entry.set = set;
+		entry.is_percent = is_percent;
+		entry.image = image;
+		return entry;
+	}
+	ModifierButtonEntry ModifierButtonEntryMake(string display_name, string modifier, int set, boolean is_percent, string image)
+	{
+		boolean [string] modifiers;
+		modifiers[modifier] = true;
+		return ModifierButtonEntryMake(display_name, modifiers, set, is_percent, image);
+	}
+	void listAppend(ModifierButtonEntry [int] list, ModifierButtonEntry entry)
+	{
+		int position = list.count();
+		while (list contains position)
+			position += 1;
+		list[position] = entry;
+	}
+	
 	//Modifiers:
-	string [string] modifier_buttons; //description -> numeric_modifier
-	modifier_buttons["meat"] = "Meat Drop";
-	modifier_buttons["item"] = "Item Drop";
-	modifier_buttons["muscle"] = "muscle percent";
-	modifier_buttons["myst"] = "mysticality percent";
-	modifier_buttons["moxie"] = "moxie percent";
-	modifier_buttons["+combat"] = "combat rate";
-	modifier_buttons["combat"] = "combat rate";
-	modifier_buttons["familiar weight"] = "familiar weight";
-	modifier_buttons["init"] = "initiative";
-	modifier_buttons["ML"] = "Monster Level";
+	ModifierButtonEntry [int] modifier_buttons;
+	//string [string] modifier_buttons; //description -> numeric_modifier
+	
+	modifier_buttons.listAppend(ModifierButtonEntryMake("meat", "Meat Drop", 0, true, "itemimages/meat.gif"));
+	modifier_buttons.listAppend(ModifierButtonEntryMake("item", "Item Drop", 0, true, "itemimages/potion9.gif"));
+	modifier_buttons.listAppend(ModifierButtonEntryMake("muscle", "muscle percent", 1, true, "itemimages/bigdumbbell.gif"));
+	modifier_buttons.listAppend(ModifierButtonEntryMake("myst", "mysticality percent", 1, true, "itemimages/tinystars.gif"));
+	modifier_buttons.listAppend(ModifierButtonEntryMake("moxie", "moxie percent", 1, true, "itemimages/greaserint.gif"));
+	modifier_buttons.listAppend(ModifierButtonEntryMake("+combat", "combat rate", 0, true, "itemimages/familiar14.gif"));
+	modifier_buttons.listAppend(ModifierButtonEntryMake("combat", "combat rate", 0, true, "itemimages/footprints.gif"));
+	if (my_familiar() != $familiar[none])
+		modifier_buttons.listAppend(ModifierButtonEntryMake("familiar weight", "familiar weight", 0, false, "itemimages/blackcat.gif"));
+	modifier_buttons.listAppend(ModifierButtonEntryMake("init", "initiative", 0, true, "itemimages/fast.gif"));
+	modifier_buttons.listAppend(ModifierButtonEntryMake("ML", "Monster Level", 0, false, "itemimages/skinknife.gif"));
+	modifier_buttons.listAppend(ModifierButtonEntryMake("HP", "Maximum HP Percent", 1, true, "itemimages/strboost.gif"));
+	modifier_buttons.listAppend(ModifierButtonEntryMake("HP", "Maximum HP", 1, false, "itemimages/strboost.gif"));
 	if (my_primestat() == $stat[muscle])
-		modifier_buttons["mainstat experience"] = "muscle experience percent";
+		modifier_buttons.listAppend(ModifierButtonEntryMake("mainstat exp", "muscle experience percent", 1, true, "itemimages/fitposter.gif"));
 	else if (my_primestat() == $stat[mysticality])
-		modifier_buttons["mainstat experience"] = "mysticality experience percent";
+		modifier_buttons.listAppend(ModifierButtonEntryMake("mainstat exp", "mysticality experience percent", 1, true, "itemimages/fitposter.gif"));
 	else if (my_primestat() == $stat[moxie])
-		modifier_buttons["mainstat experience"] = "moxie experience percent";
-	//modifier_buttons["hp"] = "HP"; //complicated
+		modifier_buttons.listAppend(ModifierButtonEntryMake("mainstat exp", "moxie experience percent", 1, true, "itemimages/fitposter.gif"));
+	
+	string [element] image_for_element = {$element[cold]:"itemimages/snowflake.gif", $element[stench]:"itemimages/stench.gif", $element[hot]:"itemimages/flame.gif", $element[spooky]:"itemimages/skull.gif", $element[sleaze]:"itemimages/wink.gif"};
+	
+	string [element] colour_for_element = {$element[cold]:"blue", $element[stench]:"green", $element[hot]:"red", $element[spooky]:"gray", $element[sleaze]:"purple"};
+	foreach e in $elements[hot,stench,spooky,cold,sleaze]
+	{
+		string colour_span = "<span style=\"color:" + colour_for_element[e] + ";\">";
+		modifier_buttons.listAppend(ModifierButtonEntryMake(colour_span + e + " res</span>", e + " Resistance", 2, false, image_for_element[e]));
+		boolean [string] damage_modifiers;
+		damage_modifiers[e + " Damage"] = true;
+		damage_modifiers[e + " Spell Damage"] = true;
+		modifier_buttons.listAppend(ModifierButtonEntryMake(colour_span + e + " dmg</span>", damage_modifiers, 3, false, image_for_element[e]));
+	}
+	modifier_buttons.listAppend(ModifierButtonEntryMake("food drop", "Food Drop", 4, true, "itemimages/bowl.gif"));
+	modifier_buttons.listAppend(ModifierButtonEntryMake("booze drop", "Booze Drop", 4, true, "itemimages/tankard.gif"));
+	modifier_buttons.listAppend(ModifierButtonEntryMake("damage", "Weapon Damage Percent", 4, true, "itemimages/nicesword.gif"));
+	modifier_buttons.listAppend(ModifierButtonEntryMake("spell damage", "Spell Damage Percent", 4, true, "itemimages/wizhat2.gif"));
+	
+	
 	//Community service:
 	//melee damage percent
 	//spell damage percent
 	//booze drops
 	//hot resistance
+	//out.append("<div class=\"genie_header\">Buffs</div>");
 	out.append("<div style=\"display:table;width:100%;\"><div style=\"display:table-row;\">");
 	int buttons_written = 0;
 	
@@ -4294,12 +4442,29 @@ buffer genieGenerateNextEffectWishes()
 		effects_we_can_obtain_otherwise[e] = true;
 	}
 	
-	boolean [effect] valid_effects = genieValidEffects();
-	foreach description, modifier in modifier_buttons
+	sort modifier_buttons by value.set;
+	int [int] entries_per_set;
+	foreach key, entry in modifier_buttons
 	{
-		boolean is_percent = true;
-		if (description == "familiar weight" || description == "ML")
-			is_percent = false;
+		entries_per_set[entry.set] = entries_per_set[entry.set] + 1;
+	}
+	boolean [effect] valid_effects = genieValidEffects();
+	//foreach description, modifier in modifier_buttons
+	int last_set = 0;
+	foreach key, entry in modifier_buttons
+	{
+		if (entry.set != last_set)
+		{
+			buttons_written = 0;
+			last_set = entry.set;
+			out.append("</div></div>");
+			out.append("<hr>");
+			out.append("<div style=\"display:table;width:100%;\"><div style=\"display:table-row;\">");
+		}
+		
+		boolean is_percent = entry.is_percent;
+		/*if (entry.display_name == "familiar weight" || entry.display_name == "ML")
+			is_percent = false;*/
 		float best_effect_score = 0.0;
 		float best_effect_value = 0.0;
 		effect best_effect = $effect[none];
@@ -4307,15 +4472,19 @@ buffer genieGenerateNextEffectWishes()
 		{
 			if (effects_we_can_obtain_otherwise[e]) continue;
 			boolean should_be_negative = false;
-			if (description == "combat")
+			if (entry.display_name == "combat")
 				should_be_negative = true;
 			if (e.have_effect() > 0) continue;
-			float value = e.numeric_modifier(modifier); //FIXME muscle/myst/etc
+			float value; //FIXME muscle/myst/etc
+			foreach modifier in entry.modifiers
+			{
+				value += e.numeric_modifier(modifier);
+			}
 			
 			float score = value;
 			foreach s in $strings[Item Drop,Meat Drop]
 			{
-				if (s == modifier) continue;
+				if (entry.modifiers[s]) continue;
 				score += e.numeric_modifier(s) / 100.0;
 			}
 			
@@ -4335,12 +4504,18 @@ buffer genieGenerateNextEffectWishes()
 				best_effect = e;
 			}
 		}
-		//print_html(description + ": " + best_effect);
-		if (buttons_written % 3 == 0 && buttons_written > 0)
+		//print_html(entry.display_name + ": " + best_effect);
+
+		if (buttons_written % bestModForTableCount(entries_per_set[entry.set]) == 0 && buttons_written > 0)
 			out.append("</div><div style=\"display:table-row;\">");
 		int amount = best_effect_value;
 		string wish = "to be " + best_effect.replace_string("'", "\\'");
-		out.append(generateButton((amount > 0 ? "+" : "") + amount + (is_percent ? "% " : " ") + description, "", true, wish));
+		
+		string image = imageFromEffect(best_effect);
+		if (entry.image != "")
+			image = entry.image;
+		
+		out.append(generateButton((amount > 0 ? "+" : "") + amount + (is_percent ? "% " : " ") + entry.display_name, "", true, wish, image));
 		buttons_written += 1;
 	}
 	out.append("</div>"); //table-row
@@ -4362,7 +4537,7 @@ buffer genieGenerateSecondaryHardcodedWishes()
 		if ($item[milk of magnesium].available_amount() == 0) //'
 			desired_effects[$effect[got milk]] = true;
 		desired_effects[$effect[Barrel of Laughs]] = true;
-		effect_descriptions[$effect[Barrel of Laughs]] = "more adv from food";
+		effect_descriptions[$effect[Barrel of Laughs]] = "+4 adv from food";
 		//FIXME The Tunger™
 	}
 	if (inebriety_limit() - my_inebriety() > 0)
@@ -4370,7 +4545,7 @@ buffer genieGenerateSecondaryHardcodedWishes()
 		if (!$skill[the ode to booze].have_skill())
 			desired_effects[$effect[ode to booze]] = true;
 		desired_effects[$effect[Beer Barrel Polka]] = true;
-		effect_descriptions[$effect[Beer Barrel Polka]] = "more adv from booze";
+		effect_descriptions[$effect[Beer Barrel Polka]] = "+4 adv from booze";
 	}
 	if (!($skill[Inigo's Incantation of Inspiration].have_skill() && $skill[Inigo's Incantation of Inspiration].is_unrestricted() && $effect[Inigo's Incantation of Inspiration].have_effect() == 0)) //'
 		desired_effects[$effect[Inigo's Incantation of Inspiration]] = true; //'
@@ -4387,19 +4562,28 @@ buffer genieGenerateSecondaryHardcodedWishes()
 	
 	out.append("<hr>");
 	int buttons_shown = 0;
+	out.append("<div style=\"display:table;width:100%;\"><div style=\"display:table-row;\">");
+	
+	boolean [effect] effects_showing;
 	foreach e in desired_effects
 	{
 		if (e.have_effect() > 0) continue;
-		if (buttons_shown % 4 == 0 && buttons_shown > 0)
-			out.append("<br>");
+		effects_showing[e] = true;
+	}
+	foreach e in effects_showing
+	{
+		if (buttons_shown % bestModForTableCount(effects_showing.count()) == 0 && buttons_shown > 0)
+			out.append("</div><div style=\"display:table-row;\">");
 		
 		string button_description = e;
+		button_description += "<br>";
 		if (effect_descriptions contains e)
-			button_description += "<br><span style=\"font-weight:normal;font-size:0.9em;\">(" + effect_descriptions[e] + ")</span>";
+			button_description += "<span style=\"font-weight:normal;font-size:0.9em;\">(" + effect_descriptions[e] + ")</span>";
 		string wish = "to be " + e.replace_string("'", "\\'");
-		out.append(generateButton(button_description, "", false, wish));
+		out.append(generateButton(button_description, "", true, wish, imageFromEffect(e)));
 		buttons_shown += 1;
 	}
+	out.append("</div></div>");
 	return out;
 }
 
@@ -4407,21 +4591,38 @@ buffer genieGenerateText()
 {
 	buffer out;
 	out.append("<script type=\"text/javascript\" src=\"genie.js\"></script>");
+	out.append("<style type=\"text/css\">");
+	//out.append("div.button {border: 2px black solid;font-family: Arial, Helvetica, sans-serif;font-size: 10pt;font-weight: bold;background-color: #FFFFFF;color: #000000;-webkit-appearance: none;-webkit-border-radius: 0;text-align:center;vertical-align:middle;padding-top: 2px;padding-right: 6px;padding-bottom: 3px;padding-left: 6px;cursor:pointer;} div.button:hover {background:#E1E3E7;} ");
+	//out.append("div.button {border: 2px grey solid;font-family: Arial, Helvetica, sans-serif;font-size: 10pt;font-weight: bold;background-color: #FFFFFF;color: #000000;-webkit-appearance: none;-webkit-border-radius: 0;text-align:center;vertical-align:middle;padding-top: 2px;padding-right: 6px;padding-bottom: 3px;padding-left: 6px;cursor:pointer;border-radius:3px;} div.button:hover {background-color:#E1E3E7;} ");
+	out.append("div.button {font-family: Arial, Helvetica, sans-serif;font-size: 10pt;font-weight: bold;background-color: #FFFFFF;color: #000000;-webkit-appearance: none;-webkit-border-radius: 0;text-align:left;vertical-align:middle;padding-top: 2px;padding-right: 6px;padding-bottom: 3px;padding-left: 6px;cursor:pointer;border-radius:3px;} div.button:hover {background-color:#E1E3E7;} ");
+	out.append("hr {width:80%;}");
+	out.append(".genie_header {margin-left:auto;margin-right:auto;text-align:center;font-weight:bold;font-size:1.4em;}");
+	
+	out.append("</style>");
 	out.append("<hr>");
 	
 	out.append(genieGenerateDropdowns());
 	
 	out.append("<hr>");
 	out.append(genieGenerateHardcodedWishes());
+	out.append(genieGenerateSecondaryHardcodedWishes());
 	out.append("<hr>");
 	out.append(genieGenerateNextEffectWishes());
-	out.append(genieGenerateSecondaryHardcodedWishes());
 	return out;
 }
 
 void main(string page_text_encoded)
 {
-	refresh_status(); //precautionary measure; if we submit a wish, then we might not yet have_effect() yet, so do this.
+	if (form_fields()["wish"] != "")
+		refresh_status(); //precautionary measure; if we submit a wish, then we might not yet have_effect() yet, so do this.
+	else
+	{
+		if (get_property_int("_g9Effect") == 0)
+		{
+			//discover g-9, we might use it!
+			visit_url("desc_effect.php?whicheffect=af64d06351a3097af52def8ec6a83d9b");
+		}
+	}
 	string page_text = page_text_encoded.choiceOverrideDecodePageText();
 	string [string] form_fields = form_fields();
 	//Modify page_text as you will here.
@@ -4438,6 +4639,7 @@ void main(string page_text_encoded)
 	match_text = "</form>";
 	page_text = page_text.replace_string(match_text, match_text + genie_text);
 	
+	page_text = page_text.replace_string("<img src=\"https://s3.amazonaws.com/images.kingdomofloathing.com/otherimages/genie_happy.gif\">", "<div style=\"width:100px;height:200px;\"><img src=\"https://s3.amazonaws.com/images.kingdomofloathing.com/otherimages/genie_happy.gif\" id=\"genie_image\" style=\"width:100%;height:auto;\"></div>");
 	
 	write(page_text);
 }

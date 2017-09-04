@@ -65,3 +65,17 @@ function genieButtonClicked(id, command, hash)
 		//window.location.assign(url);
 	}
 }
+
+function genieSelectionChanged(div_id)
+{
+	var new_image_src = "";
+	
+	var selection_div = document.getElementById(div_id);
+	var option_div = selection_div.options[selection_div.selectedIndex];
+	
+	new_image_src = option_div.getAttribute("data-replacement-image");
+	
+	//new_image_src = "images/otherimages/witchywoman.gif";
+	if (new_image_src.length > 0)
+		document.getElementById("genie_image").src = new_image_src;
+}
