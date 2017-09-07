@@ -1805,7 +1805,7 @@ element get_property_element(string property)
 }
 
 
-string __genie_version = "1.1.4";
+string __genie_version = "1.1.5";
 
 string removeFirstWord(string line)
 {

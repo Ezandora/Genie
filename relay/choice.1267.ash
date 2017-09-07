@@ -3862,7 +3862,7 @@ int licenseToAdventureSocialCapitalAvailable()
 }
 
 
-string __genie_version = "1.1.4";
+string __genie_version = "1.1.5";
 //Comment to allow file_to_map() to see this file:
 //Choice	override
 
@@ -3879,7 +3879,7 @@ boolean [string] __numeric_modifier_names = $strings[Familiar Weight,Monster Lev
 boolean [monster] __genie_invalid_monsters = $monsters[ninja snowman assassin,modern zmobie,swarm of ghuol whelps];
 
 
-boolean [effect] __genie_invalid_effects = $effects[jukebox hero,Juicy Boost,Meteor Showered,Steely-eyed squint,Blue Eyed Devil,Cereal Killer,Nearly All-Natural,Amazing,Throwing some shade,A rose by any other material,Gaze of the Gazelle,East of Eaten,Robot Friends,Smart Drunk,Margamergency,Pajama Party,Rumpel-Pumped,Song of Battle,Song of Solitude,Buy!\  Sell!\  Buy!\  Sell!,eldritch attunement,The Inquisitor's unknown effect,Filthworm Drone Stench,Filthworm Guard Stench,Filthworm Larva Stench,Green Peace,Red Menace,Video... Games?,things man was not meant to eat,Whitesloshed,thrice-cursed,bendin' hell,Synthesis: Hot,Synthesis: Cold,Synthesis: Pungent,Synthesis: Scary,Synthesis: Greasy,Synthesis: Strong,Synthesis: Smart,Synthesis: Cool,Synthesis: Hardy,Synthesis: Energy,Synthesis: Greed,Synthesis: Collection,Synthesis: Movement,Synthesis: Learning,Synthesis: Style,The Good Salmonella,Giant Growth,Lovebotamy,Open Heart Surgery,Wandering Eye Surgery,gar-ish,Puissant Pressure,Perspicacious Pressure,Pulchritudinous Pressure,It's Good To Be Royal!,The Fire Inside,Puzzle Champ,The Royal We,Hotform,Coldform,Sleazeform,Spookyform,Stenchform,A Hole in the World,Bored With Explosions,thanksgetting]; //'
+boolean [effect] __genie_invalid_effects = $effects[jukebox hero,Juicy Boost,Meteor Showered,Steely-eyed squint,Blue Eyed Devil,Cereal Killer,Nearly All-Natural,Amazing,Throwing some shade,A rose by any other material,Gaze of the Gazelle,East of Eaten,Robot Friends,Smart Drunk,Margamergency,Pajama Party,Rumpel-Pumped,Song of Battle,Song of Solitude,Buy!\  Sell!\  Buy!\  Sell!,eldritch attunement,The Inquisitor's unknown effect,Filthworm Drone Stench,Filthworm Guard Stench,Filthworm Larva Stench,Green Peace,Red Menace,Video... Games?,things man was not meant to eat,Whitesloshed,thrice-cursed,bendin' hell,Synthesis: Hot,Synthesis: Cold,Synthesis: Pungent,Synthesis: Scary,Synthesis: Greasy,Synthesis: Strong,Synthesis: Smart,Synthesis: Cool,Synthesis: Hardy,Synthesis: Energy,Synthesis: Greed,Synthesis: Collection,Synthesis: Movement,Synthesis: Learning,Synthesis: Style,The Good Salmonella,Giant Growth,Lovebotamy,Open Heart Surgery,Wandering Eye Surgery,gar-ish,Puissant Pressure,Perspicacious Pressure,Pulchritudinous Pressure,It's Good To Be Royal!,The Fire Inside,Puzzle Champ,The Royal We,Hotform,Coldform,Sleazeform,Spookyform,Stenchform,A Hole in the World,Bored With Explosions,thanksgetting,Barrel of Laughs,Beer Barrel Polka,Superdrifting,Covetin' Drunk]; //'
 
 
 int bestModForTableCount(int count)
@@ -4554,16 +4554,16 @@ buffer genieGenerateSecondaryHardcodedWishes()
 	{
 		if ($item[milk of magnesium].available_amount() == 0) //'
 			desired_effects[$effect[got milk]] = true;
-		desired_effects[$effect[Barrel of Laughs]] = true;
-		effect_descriptions[$effect[Barrel of Laughs]] = "+4 adv from food";
-		//FIXME The Tunger™
+		//desired_effects[$effect[Barrel of Laughs]] = true;
+		//effect_descriptions[$effect[Barrel of Laughs]] = "+4 adv from food";
+		//FIXME The Tunger™ (probably not)
 	}
 	if (inebriety_limit() - my_inebriety() > 0)
 	{
 		if (!$skill[the ode to booze].have_skill())
 			desired_effects[$effect[ode to booze]] = true;
-		desired_effects[$effect[Beer Barrel Polka]] = true;
-		effect_descriptions[$effect[Beer Barrel Polka]] = "+4 adv from booze";
+		//desired_effects[$effect[Beer Barrel Polka]] = true;
+		//effect_descriptions[$effect[Beer Barrel Polka]] = "+4 adv from booze";
 	}
 	if (!($skill[Inigo's Incantation of Inspiration].have_skill() && $skill[Inigo's Incantation of Inspiration].is_unrestricted() && $effect[Inigo's Incantation of Inspiration].have_effect() == 0)) //'
 		desired_effects[$effect[Inigo's Incantation of Inspiration]] = true; //'
