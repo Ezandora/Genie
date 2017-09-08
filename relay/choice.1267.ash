@@ -3862,7 +3862,7 @@ int licenseToAdventureSocialCapitalAvailable()
 }
 
 
-string __genie_version = "1.1.5";
+string __genie_version = "1.1.6";
 //Comment to allow file_to_map() to see this file:
 //Choice	override
 
@@ -4320,9 +4320,8 @@ buffer genieGenerateHardcodedWishes()
 	
 	out.append(generateButton(MIN(50000, my_level() * 500) + " meat", "be_rich_button", true, "for more meat", "itemimages/meat.gif"));
 	out.append(generateButton("A pony", "pony_button", true, "for a pony", "itemimages/pony1.gif"));
-	out.append(generateButton("Pocket wish", "pocket_wish_button", true, "for more wishes", "itemimages/whitecard.gif"));
+	out.append(generateButton("All stats", "all_stats_button", true, "I were big", "itemimages/dna.gif"));
 	out.append("</div><div style=\"display:table-row;\">");
-	out.append(generateButton("Fight the genie", "genie_button", true, "you were free", "itemimages/gbottle_open.gif"));
 	
 	/*string mainstat_wish;
 	if (my_primestat() == $stat[muscle])
@@ -4333,11 +4332,12 @@ buffer genieGenerateHardcodedWishes()
 		mainstat_wish = "I was a baller";
 	if (mainstat_wish != "")
 		out.append(generateButton("Mainstat", "mainstat_button", true, mainstat_wish));*/
-	out.append(generateButton("All stats", "all_stats_button", true, "I were big", "itemimages/dna.gif"));
 	out.append(generateButton("Muscle stats", "muscle_button", true, "I was taller", "itemimages/bigdumbbell.gif"));
-	out.append("</div><div style=\"display:table-row;\">");
 	out.append(generateButton("Mysticality stats", "mysticality_button", true, "I wish I had a rabbit in a hat with a bat", "itemimages/tinystars.gif"));
 	out.append(generateButton("Moxie stats", "moxie_button", true, "I was a baller", "itemimages/greaserint.gif"));
+	out.append("</div><div style=\"display:table-row;\">");
+	out.append(generateButton("Pocket wish", "pocket_wish_button", true, "for more wishes", "itemimages/whitecard.gif"));
+	out.append(generateButton("Fight the genie", "genie_button", true, "you were free", "itemimages/gbottle_open.gif"));
 	if (to_item("blessed rustproof +2 gray dragon scale mail").available_amount() == 0)
 		out.append(generateButton("Dragon mail", "", true, "for a blessed rustproof +2 gray dragon scale mail", "itemimages/envelope.gif"));
 	//blessed rustproof +2 gray dragon scale mail
@@ -4346,6 +4346,65 @@ buffer genieGenerateHardcodedWishes()
 	out.append("</div>"); //table
 	
 	return out;
+}
+
+Record GenieBestEffectResult
+{
+	effect e;
+	float value;
+};
+GenieBestEffectResult findBestEffectForModifiers(boolean [string] modifiers, boolean should_be_negative, boolean [effect] effects_we_can_obtain_otherwise, boolean [effect] valid_effects)
+{
+	float best_effect_score = 0.0;
+	float best_effect_value = 0.0;
+	effect best_effect = $effect[none];
+	foreach e in valid_effects
+	{
+		if (effects_we_can_obtain_otherwise[e]) continue;
+		if (e.have_effect() > 0) continue;
+		float value; //FIXME muscle/myst/etc
+		foreach modifier in modifiers
+		{
+			value += e.numeric_modifier(modifier);
+		}
+		
+		float score = value;
+		foreach s in $strings[Item Drop,Meat Drop]
+		{
+			if (modifiers[s]) continue;
+			score += e.numeric_modifier(s) / 100.0;
+		}
+		if (modifiers["muscle percent"] || modifiers["mysticality percent"] || modifiers["moxie percent"])
+		{
+			foreach s in $strings[muscle percent,mysticality percent,moxie percent]
+			{
+				if (!modifiers[s])
+				{
+					score += e.numeric_modifier(s) / 100.0;
+				}
+			}
+		}
+		
+		if (should_be_negative)
+		{
+			if (score < best_effect_score)
+			{
+				best_effect_score = score;
+				best_effect_value = value;
+				best_effect = e;
+			}
+		}
+		else if (score > best_effect_score)
+		{
+			best_effect_score = score;
+			best_effect_value = value;
+			best_effect = e;
+		}
+	}
+	GenieBestEffectResult result;
+	result.e = best_effect;
+	result.value = best_effect_value;
+	return result;
 }
 
 buffer genieGenerateNextEffectWishes()
@@ -4384,15 +4443,51 @@ buffer genieGenerateNextEffectWishes()
 		list[position] = entry;
 	}
 	
+	boolean [effect] valid_effects = genieValidEffects();
+	
+	
+	
+	boolean [effect] effects_we_can_obtain_otherwise;
+	foreach s in $skills[]
+	{
+		effect e = s.to_effect();
+		if (e == $effect[none]) continue;
+		if (s.have_skill() && s.mp_cost() <= my_maxmp())
+			effects_we_can_obtain_otherwise[e] = true;
+	}
+	foreach it in $items[]
+	{
+		if (it.available_amount() == 0) continue;
+		if (it.inebriety + it.spleen + it.fullness > 0) continue;
+		effect e = it.to_effect();
+		if (e == $effect[none]) continue;
+		effects_we_can_obtain_otherwise[e] = true;
+	}
+	
+	
+	
 	//Modifiers:
 	ModifierButtonEntry [int] modifier_buttons;
 	//string [string] modifier_buttons; //description -> numeric_modifier
 	
 	modifier_buttons.listAppend(ModifierButtonEntryMake("meat", "Meat Drop", 0, true, "itemimages/meat.gif"));
 	modifier_buttons.listAppend(ModifierButtonEntryMake("item", "Item Drop", 0, true, "itemimages/potion9.gif"));
-	modifier_buttons.listAppend(ModifierButtonEntryMake("muscle", "muscle percent", 1, true, "itemimages/bigdumbbell.gif"));
-	modifier_buttons.listAppend(ModifierButtonEntryMake("myst", "mysticality percent", 1, true, "itemimages/tinystars.gif"));
-	modifier_buttons.listAppend(ModifierButtonEntryMake("moxie", "moxie percent", 1, true, "itemimages/greaserint.gif"));
+	
+	GenieBestEffectResult best_effect_result_muscle = findBestEffectForModifiers($strings[muscle percent], false, effects_we_can_obtain_otherwise, valid_effects);
+	GenieBestEffectResult best_effect_result_mysticality = findBestEffectForModifiers($strings[mysticality percent], false, effects_we_can_obtain_otherwise, valid_effects);
+	GenieBestEffectResult best_effect_result_moxie = findBestEffectForModifiers($strings[moxie percent], false, effects_we_can_obtain_otherwise, valid_effects);
+	
+	if (best_effect_result_muscle.e == best_effect_result_mysticality.e && best_effect_result_muscle.e == best_effect_result_moxie.e)
+	{
+		modifier_buttons.listAppend(ModifierButtonEntryMake("all stats", "muscle percent", 1, true, "itemimages/dna.gif"));
+	}
+	else
+	{
+		modifier_buttons.listAppend(ModifierButtonEntryMake("muscle", "muscle percent", 1, true, "itemimages/bigdumbbell.gif"));
+		modifier_buttons.listAppend(ModifierButtonEntryMake("mysticality", "mysticality percent", 1, true, "itemimages/tinystars.gif"));
+		modifier_buttons.listAppend(ModifierButtonEntryMake("moxie", "moxie percent", 1, true, "itemimages/greaserint.gif"));
+	}
+	
 	modifier_buttons.listAppend(ModifierButtonEntryMake("+combat", "combat rate", 0, true, "itemimages/familiar14.gif"));
 	modifier_buttons.listAppend(ModifierButtonEntryMake("combat", "combat rate", 0, true, "itemimages/footprints.gif"));
 	if (my_familiar() != $familiar[none])
@@ -4443,30 +4538,12 @@ buffer genieGenerateNextEffectWishes()
 	out.append("<div style=\"display:table;width:100%;\"><div style=\"display:table-row;\">");
 	int buttons_written = 0;
 	
-	boolean [effect] effects_we_can_obtain_otherwise;
-	foreach s in $skills[]
-	{
-		effect e = s.to_effect();
-		if (e == $effect[none]) continue;
-		if (s.have_skill() && s.mp_cost() <= my_maxmp())
-			effects_we_can_obtain_otherwise[e] = true;
-	}
-	foreach it in $items[]
-	{
-		if (it.available_amount() == 0) continue;
-		if (it.inebriety + it.spleen + it.fullness > 0) continue;
-		effect e = it.to_effect();
-		if (e == $effect[none]) continue;
-		effects_we_can_obtain_otherwise[e] = true;
-	}
-	
 	sort modifier_buttons by value.set;
 	int [int] entries_per_set;
 	foreach key, entry in modifier_buttons
 	{
 		entries_per_set[entry.set] = entries_per_set[entry.set] + 1;
 	}
-	boolean [effect] valid_effects = genieValidEffects();
 	//foreach description, modifier in modifier_buttons
 	int last_set = 0;
 	foreach key, entry in modifier_buttons
@@ -4481,55 +4558,21 @@ buffer genieGenerateNextEffectWishes()
 		}
 		
 		boolean is_percent = entry.is_percent;
+		boolean should_be_negative = false;
+		if (entry.display_name == "combat")
+			should_be_negative = true;
 		/*if (entry.display_name == "familiar weight" || entry.display_name == "ML")
 			is_percent = false;*/
-		float best_effect_score = 0.0;
-		float best_effect_value = 0.0;
-		effect best_effect = $effect[none];
-		foreach e in valid_effects
-		{
-			if (effects_we_can_obtain_otherwise[e]) continue;
-			boolean should_be_negative = false;
-			if (entry.display_name == "combat")
-				should_be_negative = true;
-			if (e.have_effect() > 0) continue;
-			float value; //FIXME muscle/myst/etc
-			foreach modifier in entry.modifiers
-			{
-				value += e.numeric_modifier(modifier);
-			}
-			
-			float score = value;
-			foreach s in $strings[Item Drop,Meat Drop]
-			{
-				if (entry.modifiers[s]) continue;
-				score += e.numeric_modifier(s) / 100.0;
-			}
-			
-			if (should_be_negative)
-			{
-				if (score < best_effect_score)
-				{
-					best_effect_score = score;
-					best_effect_value = value;
-					best_effect = e;
-				}
-			}
-			else if (score > best_effect_score)
-			{
-				best_effect_score = score;
-				best_effect_value = value;
-				best_effect = e;
-			}
-		}
+		GenieBestEffectResult best_effect_result = findBestEffectForModifiers(entry.modifiers, should_be_negative, effects_we_can_obtain_otherwise, valid_effects);
+		
 		//print_html(entry.display_name + ": " + best_effect);
 
 		if (buttons_written % bestModForTableCount(entries_per_set[entry.set]) == 0 && buttons_written > 0)
 			out.append("</div><div style=\"display:table-row;\">");
-		int amount = best_effect_value;
-		string wish = "to be " + best_effect.replace_string("'", "\\'");
+		int amount = best_effect_result.value;
+		string wish = "to be " + best_effect_result.e.replace_string("'", "\\'");
 		
-		string image = imageFromEffect(best_effect);
+		string image = imageFromEffect(best_effect_result.e);
 		if (entry.image != "")
 			image = entry.image;
 		
