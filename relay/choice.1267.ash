@@ -3862,7 +3862,7 @@ int licenseToAdventureSocialCapitalAvailable()
 }
 
 
-string __genie_version = "1.1.6";
+string __genie_version = "1.1.7";
 //Comment to allow file_to_map() to see this file:
 //Choice	override
 

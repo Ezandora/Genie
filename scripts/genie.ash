@@ -1805,7 +1805,7 @@ element get_property_element(string property)
 }
 
 
-string __genie_version = "1.1.6";
+string __genie_version = "1.1.7";
 
 string removeFirstWord(string line)
 {
@@ -1819,9 +1819,9 @@ void main(string arguments)
 	arguments = arguments.to_lower_case();
 	print_html("Genie version " + __genie_version);
 	
-	if ($item[genie bottle].item_amount() == 0)
+	if ($item[genie bottle].item_amount() == 0 && $item[pocket wish].item_amount() == 0)
 	{
-		print_html("You don't appear to have a genie bottle. Apologies, but we don't work on pocket wishes.");
+		print_html("You don't appear to have a genie bottle or pocket wish.");
 		return;
 	}
 	
@@ -1895,7 +1895,20 @@ void main(string arguments)
 	if (wish != "")
 	{
 		print("I wish " + wish + "...");
-		visit_url("inv_use.php?whichitem=9529");
+		boolean use_pocket_wish_instead = false;
+		if ($item[genie bottle].item_amount() > 0 && get_property("_genieWishes").to_int() < 3)
+		{
+			buffer genie_use_text = visit_url("inv_use.php?whichitem=9529");
+			if (genie_use_text.contains_text("You have 0 wishes left today"))
+				use_pocket_wish_instead = true;
+		}
+		else
+			use_pocket_wish_instead = true;
+		if ($item[pocket wish].item_amount() > 0 && use_pocket_wish_instead)
+		{
+			print("Wishing with a pocket wish...");
+			visit_url("inv_use.php?whichitem=" + $item[pocket wish].to_int());
+		}
 		visit_url("choice.php?whichchoice=1267&option=1&wish=" + wish);
 		if (should_run_combat)
 		{
