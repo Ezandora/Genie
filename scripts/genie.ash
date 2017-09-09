@@ -1804,8 +1804,13 @@ element get_property_element(string property)
     return get_property(property).to_element();
 }
 
+item get_property_item(string property)
+{
+    return get_property(property).to_item();
+}
 
-string __genie_version = "1.1.7";
+
+string __genie_version = "1.1.8";
 
 string removeFirstWord(string line)
 {
