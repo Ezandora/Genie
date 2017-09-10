@@ -1,7 +1,7 @@
 import "relay/choice.ash";
 
 
-string __genie_version = "1.1.8";
+string __genie_version = "1.1.9";
 
 //Allows error checking. The intention behind this design is Errors are passed in to a method. The method then sets the error if anything went wrong.
 record Error
@@ -4061,6 +4061,8 @@ monster [int] genieGenerateValidMonsterList()
 			early_monster_order.listAppend($monster[Mountain Man]);
 		if ($item[talisman o' namsilat].available_amount() == 0) //'
 			early_monster_order.listAppend($monster[gaudy pirate]);
+		if (get_property_int("desertExploration") < 100 && $item[drum machine].available_amount() == 0) //FIXME the exact test is way more complicated
+			early_monster_order.listAppend($monster[blur]);
 		if (!have_outfit_components("Frat Warrior Fatigues") && !QuestState("questL12War").finished)
 			early_monster_order.listAppend($monster[Orcish Frat Boy Spy]);
 		if (get_property("sidequestNunsCompleted") == "none" && QuestState("questL12War").mafia_internal_step == 2)
