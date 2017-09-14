@@ -1,7 +1,7 @@
 import "relay/choice.ash";
 
 
-string __genie_version = "1.1.10";
+string __genie_version = "1.1.11";
 
 //Allows error checking. The intention behind this design is Errors are passed in to a method. The method then sets the error if anything went wrong.
 record Error
@@ -4543,7 +4543,6 @@ GenieBestEffectResult findBestEffectForModifiers(boolean [string] modifiers, boo
 				}
 			}
 		}
-		
 		if (should_be_negative)
 		{
 			if (score < best_effect_score)
@@ -4614,13 +4613,16 @@ buffer genieGenerateNextEffectWishes()
 		if (s.have_skill() && s.mp_cost() <= my_maxmp())
 			effects_we_can_obtain_otherwise[e] = true;
 	}
-	foreach it in $items[]
+	if (!can_interact())
 	{
-		if (it.available_amount() == 0) continue;
-		if (it.inebriety + it.spleen + it.fullness > 0) continue;
-		effect e = it.to_effect();
-		if (e == $effect[none]) continue;
-		effects_we_can_obtain_otherwise[e] = true;
+		foreach it in $items[]
+		{
+			if (it.available_amount() == 0) continue;
+			if (it.inebriety + it.spleen + it.fullness > 0) continue;
+			effect e = it.to_effect();
+			if (e == $effect[none]) continue;
+			effects_we_can_obtain_otherwise[e] = true;
+		}
 	}
 	
 	
@@ -4729,7 +4731,7 @@ buffer genieGenerateNextEffectWishes()
 		if (buttons_written % bestModForTableCount(entries_per_set[entry.set]) == 0 && buttons_written > 0)
 			out.append("</div><div style=\"display:table-row;\">");
 		int amount = best_effect_result.value;
-		string wish = "to be " + best_effect_result.e.replace_string("'", "\\'");
+		string wish = "to be " + best_effect_result.e.replace_string("'", "\\'").entity_encode();
 		
 		string image = imageFromEffect(best_effect_result.e);
 		if (entry.image != "")
@@ -4799,7 +4801,7 @@ buffer genieGenerateSecondaryHardcodedWishes()
 		button_description += "<br>";
 		if (effect_descriptions contains e)
 			button_description += "<span style=\"font-weight:normal;font-size:0.9em;\">(" + effect_descriptions[e] + ")</span>";
-		string wish = "to be " + e.replace_string("'", "\\'");
+		string wish = "to be " + e.replace_string("'", "\\'").entity_encode();
 		out.append(generateButton(button_description, "", true, wish, imageFromEffect(e)));
 		buttons_shown += 1;
 	}
