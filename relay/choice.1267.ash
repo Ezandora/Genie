@@ -1,7 +1,7 @@
 import "relay/choice.ash";
 
 
-string __genie_version = "2.0";
+string __genie_version = "2.0.1";
 
 //Allows error checking. The intention behind this design is Errors are passed in to a method. The method then sets the error if anything went wrong.
 record Error
@@ -4480,7 +4480,7 @@ buffer genieGenerateHardcodedWishes()
 		mainstat_wish = "I was a baller";
 	if (mainstat_wish != "")
 		out.append(generateButton("Mainstat", "mainstat_button", true, mainstat_wish));*/
-	out.append(generateButton("Muscle stats", "muscle_button", true, "I was taller", "itemimages/bigdumbbell.gif"));
+	out.append(generateButton("Muscle stats", "muscle_button", true, "I was a little bit taller", "itemimages/bigdumbbell.gif"));
 	out.append(generateButton("Mysticality stats", "mysticality_button", true, "I wish I had a rabbit in a hat with a bat", "itemimages/tinystars.gif"));
 	out.append(generateButton("Moxie stats", "moxie_button", true, "I was a baller", "itemimages/greaserint.gif"));
 	out.append("</div><div style=\"display:table-row;\">");

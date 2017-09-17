@@ -1810,7 +1810,7 @@ item get_property_item(string property)
 }
 
 
-string __genie_version = "2.0";
+string __genie_version = "2.0.1";
 
 string removeFirstWord(string line)
 {
@@ -1872,7 +1872,7 @@ void main(string arguments)
 	}
 	if (arguments == "muscle stats")
 	{
-		wish = "I was taller";
+		wish = "I was a little bit taller";
 	}
 	if (arguments == "myst stats" || arguments == "mysticality stats")
 	{
