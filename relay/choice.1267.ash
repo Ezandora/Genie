@@ -1,7 +1,7 @@
 import "relay/choice.ash";
 
 
-string __genie_version = "1.1.13";
+string __genie_version = "2.0";
 
 //Allows error checking. The intention behind this design is Errors are passed in to a method. The method then sets the error if anything went wrong.
 record Error
@@ -4826,6 +4826,15 @@ void main(string page_text_encoded)
 {
 	if (form_fields()["wish"] != "")
 		refresh_status(); //precautionary measure; if we submit a wish, then we might not yet have_effect() yet, so do this.
+	else if (form_fields()["relay_request"] != "")
+	{
+		string type = form_fields()["type"];
+		if (type == "shaq_fu")
+			set_property("relay_genie_shaq_attack", "false");
+		else if (type == "shaq_attack")
+			set_property("relay_genie_shaq_attack", "true");
+		return;
+	}
 	else
 	{
 		if (get_property_int("_g9Effect") == 0)
@@ -4850,7 +4859,10 @@ void main(string page_text_encoded)
 	match_text = "</form>";
 	page_text = page_text.replace_string(match_text, match_text + genie_text);
 	
-	page_text = page_text.replace_string("<img src=\"https://s3.amazonaws.com/images.kingdomofloathing.com/otherimages/genie_happy.gif\">", "<div style=\"width:100px;height:200px;\"><img src=\"https://s3.amazonaws.com/images.kingdomofloathing.com/otherimages/genie_happy.gif\" id=\"genie_image\" style=\"width:100%;height:auto;\"></div>");
+	string base_image = "https://s3.amazonaws.com/images.kingdomofloathing.com/otherimages/genie_happy.gif";
+	if (get_property_boolean("relay_genie_shaq_attack"))
+		base_image = "images/genie/genie_shaq.png";
+	page_text = page_text.replace_string("<img src=\"https://s3.amazonaws.com/images.kingdomofloathing.com/otherimages/genie_happy.gif\">", "<div style=\"width:100px;height:200px;\"><img src=\"" + base_image + "\" id=\"genie_image\" onclick=\"genieClicked();\" style=\"width:100%;height:auto;\"></div>");
 	
 	write(page_text);
 }

@@ -1810,7 +1810,7 @@ item get_property_item(string property)
 }
 
 
-string __genie_version = "1.1.13";
+string __genie_version = "2.0";
 
 string removeFirstWord(string line)
 {

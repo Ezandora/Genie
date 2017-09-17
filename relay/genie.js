@@ -1,3 +1,5 @@
+var __relay_url = "choice.1267.ash";
+
 function genieButtonClicked(id, command, hash)
 {
 	//choice.php?pwd=&option=1&whichchoice=1267&wish=the+wish
@@ -66,6 +68,35 @@ function genieButtonClicked(id, command, hash)
 	}
 }
 
+var __default_genie_image = "images/otherimages/genie_happy.gif";
+function changeGenieImage(new_image)
+{
+	if (new_image == undefined || new_image.length == 0)
+		new_image = __default_genie_image;
+	document.getElementById("genie_image").src = new_image;
+	
+}
+
+function genieClicked()
+{
+	var form_data = "relay_request=true&type=shaq_fu";
+	if (__default_genie_image == "images/genie/genie_shaq.png")
+	{
+		__default_genie_image = "images/otherimages/genie_happy.gif";
+	}
+	else
+	{
+		__default_genie_image = "images/genie/genie_shaq.png";
+		form_data = "relay_request=true&type=shaq_attack";
+	}
+	//disabled because we can't send a request to choice.1267.ash without popping up a dialog box
+	/*var request = new XMLHttpRequest();
+	request.onreadystatechange = function() { if (request.readyState == 4) { if (request.status == 200) { parseDisableEnableResponse(request.responseText); } } }
+	request.open("POST", __relay_url);
+	request.send(form_data);*/
+	changeGenieImage();
+}
+
 function genieSelectionChanged(div_id)
 {
 	var new_image_src = "";
@@ -76,7 +107,5 @@ function genieSelectionChanged(div_id)
 	new_image_src = option_div.getAttribute("data-replacement-image");
 	
 	//new_image_src = "images/otherimages/witchywoman.gif";
-	if (new_image_src == undefined || new_image_src.length == 0)
-		new_image_src = "images/otherimages/genie_happy.gif";
-	document.getElementById("genie_image").src = new_image_src;
+	changeGenieImage(new_image_src);
 }
