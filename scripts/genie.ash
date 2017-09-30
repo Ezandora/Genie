@@ -1810,7 +1810,7 @@ item get_property_item(string property)
 }
 
 
-string __genie_version = "2.0.1";
+string __genie_version = "2.0.2";
 
 string removeFirstWord(string line)
 {
@@ -1901,7 +1901,7 @@ void main(string arguments)
 	{
 		print("I wish " + wish + "...");
 		boolean use_pocket_wish_instead = false;
-		if ($item[genie bottle].item_amount() > 0 && get_property("_genieWishes").to_int() < 3)
+		if ($item[genie bottle].item_amount() > 0 && get_property("_genieWishesUsed").to_int() < 3)
 		{
 			buffer genie_use_text = visit_url("inv_use.php?whichitem=9529");
 			if (genie_use_text.contains_text("You have 0 wishes left today"))
