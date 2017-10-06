@@ -1,7 +1,7 @@
 import "relay/choice.ash";
 
 
-string __genie_version = "2.0.2";
+string __genie_version = "2.0.3";
 
 //Allows error checking. The intention behind this design is Errors are passed in to a method. The method then sets the error if anything went wrong.
 record Error
@@ -4059,9 +4059,14 @@ monster [int] genieGenerateValidMonsterList()
 			early_monster_order.listAppend($monster[blur]);
 		if (!have_outfit_components("Frat Warrior Fatigues") && !QuestState("questL12War").finished)
 			early_monster_order.listAppend($monster[Orcish Frat Boy Spy]);
-		if (get_property("sidequestNunsCompleted") == "none" && QuestState("questL12War").mafia_internal_step == 2)
-			early_monster_order.listAppend($monster[dirty thieving brigand]);
-		early_monster_order.listAppend($monster[forest spirit]);
+		if (QuestState("questL12War").mafia_internal_step == 2)
+		{
+			early_monster_order.listAppend($monster[green ops soldier]);
+			if (get_property("sidequestNunsCompleted") == "none")
+				early_monster_order.listAppend($monster[dirty thieving brigand]);
+		}
+		if ($items[antique machete,Machetito,Muculent machete,Papier-m&acirc;ch&eacute;te].available_amount() == 0) //FIXME test hidden properties
+			early_monster_order.listAppend($monster[forest spirit]);
 	}
 	
 	if (!$item[Witchess Set].is_unrestricted() || get_campground()[$item[Witchess Set]] == 0 || get_property_int("_witchessFights") >= 5)
@@ -4523,6 +4528,8 @@ GenieBestEffectResult findBestEffectForModifiers(boolean [string] modifiers, boo
 			if (modifiers[s]) continue;
 			score += e.numeric_modifier(s) / 100.0;
 		}
+		foreach s in $strings[HP Regen Max,Muscle,Mysticality,Moxie]
+			score += e.numeric_modifier(s) * 0.00000000001; //tiebreak why not.
 		if (modifiers["muscle percent"] || modifiers["mysticality percent"] || modifiers["moxie percent"])
 		{
 			foreach s in $strings[muscle percent,mysticality percent,moxie percent]
@@ -4638,7 +4645,8 @@ buffer genieGenerateNextEffectWishes()
 		modifier_buttons.listAppend(ModifierButtonEntryMake("mysticality", "mysticality percent", 1, true, "itemimages/tinystars.gif"));
 		modifier_buttons.listAppend(ModifierButtonEntryMake("moxie", "moxie percent", 1, true, "itemimages/greaserint.gif"));
 	}
-	
+
+
 	modifier_buttons.listAppend(ModifierButtonEntryMake("+combat", "combat rate", 0, true, "itemimages/familiar14.gif"));
 	modifier_buttons.listAppend(ModifierButtonEntryMake("combat", "combat rate", 0, true, "itemimages/footprints.gif"));
 	if (my_familiar() != $familiar[none])
@@ -4679,6 +4687,14 @@ buffer genieGenerateNextEffectWishes()
 	modifier_buttons.listAppend(ModifierButtonEntryMake("damage", "Weapon Damage Percent", 4, true, "itemimages/nicesword.gif"));
 	modifier_buttons.listAppend(ModifierButtonEntryMake("spell damage", "Spell Damage Percent", 4, true, "itemimages/wizhat2.gif"));
 	
+
+	if (true)
+	{
+		modifier_buttons.listAppend(ModifierButtonEntryMake("muscle", "muscle", 1, false, "itemimages/bigdumbbell.gif"));
+		modifier_buttons.listAppend(ModifierButtonEntryMake("mysticality", "mysticality", 1, false, "itemimages/tinystars.gif"));
+		modifier_buttons.listAppend(ModifierButtonEntryMake("moxie", "moxie", 1, false, "itemimages/greaserint.gif"));
+		modifier_buttons.listAppend(ModifierButtonEntryMake("DA", "damage absorption", 1, false, "itemimages/wallshield.gif"));
+	}
 	
 	//Community service:
 	//melee damage percent
