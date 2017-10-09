@@ -1,7 +1,7 @@
 import "relay/choice.ash";
 
 
-string __genie_version = "2.0.3";
+string __genie_version = "2.0.4";
 
 //Allows error checking. The intention behind this design is Errors are passed in to a method. The method then sets the error if anything went wrong.
 record Error
@@ -4522,24 +4522,26 @@ GenieBestEffectResult findBestEffectForModifiers(boolean [string] modifiers, boo
 			value += e.numeric_modifier(modifier);
 		}
 		
-		float score = value;
+		float tiebreaker_score = 0.0;
 		foreach s in $strings[Item Drop,Meat Drop]
 		{
 			if (modifiers[s]) continue;
-			score += e.numeric_modifier(s) / 100.0;
+			tiebreaker_score += e.numeric_modifier(s) / 10000.0;
 		}
 		foreach s in $strings[HP Regen Max,Muscle,Mysticality,Moxie]
-			score += e.numeric_modifier(s) * 0.00000000001; //tiebreak why not.
+			tiebreaker_score += e.numeric_modifier(s) * 0.00000000001; //tiebreak why not.
 		if (modifiers["muscle percent"] || modifiers["mysticality percent"] || modifiers["moxie percent"])
 		{
 			foreach s in $strings[muscle percent,mysticality percent,moxie percent]
 			{
 				if (!modifiers[s])
 				{
-					score += e.numeric_modifier(s) / 100.0;
+					tiebreaker_score += e.numeric_modifier(s) / 10000.0;
 				}
 			}
 		}
+		
+		float score = value + MAX(-1.0, MIN(1.0, tiebreaker_score));
 		if (should_be_negative)
 		{
 			if (score < best_effect_score)
