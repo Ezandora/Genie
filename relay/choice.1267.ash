@@ -1,7 +1,7 @@
 import "relay/choice.ash";
 
 
-string __genie_version = "2.0.4";
+string __genie_version = "2.0.5";
 
 //Allows error checking. The intention behind this design is Errors are passed in to a method. The method then sets the error if anything went wrong.
 record Error
@@ -953,6 +953,64 @@ skill [int] listMake(skill e1, skill e2, skill e3, skill e4, skill e5)
 	result.listAppend(e3);
 	result.listAppend(e4);
 	result.listAppend(e5);
+	return result;
+}
+
+
+monster [int] listMake(monster e1)
+{
+	monster [int] result;
+	result.listAppend(e1);
+	return result;
+}
+
+monster [int] listMake(monster e1, monster e2)
+{
+	monster [int] result;
+	result.listAppend(e1);
+	result.listAppend(e2);
+	return result;
+}
+
+monster [int] listMake(monster e1, monster e2, monster e3)
+{
+	monster [int] result;
+	result.listAppend(e1);
+	result.listAppend(e2);
+	result.listAppend(e3);
+	return result;
+}
+
+monster [int] listMake(monster e1, monster e2, monster e3, monster e4)
+{
+	monster [int] result;
+	result.listAppend(e1);
+	result.listAppend(e2);
+	result.listAppend(e3);
+	result.listAppend(e4);
+	return result;
+}
+
+monster [int] listMake(monster e1, monster e2, monster e3, monster e4, monster e5)
+{
+	monster [int] result;
+	result.listAppend(e1);
+	result.listAppend(e2);
+	result.listAppend(e3);
+	result.listAppend(e4);
+	result.listAppend(e5);
+	return result;
+}
+
+monster [int] listMake(monster e1, monster e2, monster e3, monster e4, monster e5, monster e6)
+{
+	monster [int] result;
+	result.listAppend(e1);
+	result.listAppend(e2);
+	result.listAppend(e3);
+	result.listAppend(e4);
+	result.listAppend(e5);
+	result.listAppend(e6);
 	return result;
 }
 
@@ -4507,7 +4565,7 @@ Record GenieBestEffectResult
 	effect e;
 	float value;
 };
-GenieBestEffectResult findBestEffectForModifiers(boolean [string] modifiers, boolean should_be_negative, boolean [effect] effects_we_can_obtain_otherwise, boolean [effect] valid_effects)
+GenieBestEffectResult findBestEffectForModifiers(boolean [string] modifiers, boolean should_be_negative, boolean [effect] effects_we_can_obtain_otherwise, boolean [effect] valid_effects, boolean maximum_minimum)
 {
 	float best_effect_score = 0.0;
 	float best_effect_value = 0.0;
@@ -4517,9 +4575,41 @@ GenieBestEffectResult findBestEffectForModifiers(boolean [string] modifiers, boo
 		if (effects_we_can_obtain_otherwise[e]) continue;
 		if (e.have_effect() > 0) continue;
 		float value; //FIXME muscle/myst/etc
+		
+		boolean first = true;
 		foreach modifier in modifiers
 		{
-			value += e.numeric_modifier(modifier);
+			float modifier_value = e.numeric_modifier(modifier);
+			boolean skip = false;
+			foreach e2 in $elements[hot,stench,spooky,cold,sleaze]
+			{
+				string flat_damage_lookup = e2 + " Damage";
+				string spell_damage_lookup = e2 + " Spell Damage";
+				if (maximum_minimum && modifiers[flat_damage_lookup] && modifiers[spell_damage_lookup])
+				{
+					if (modifier == flat_damage_lookup)
+					{
+						modifier_value += e.numeric_modifier(spell_damage_lookup);
+					}
+					else if (modifier == spell_damage_lookup)
+					{
+						skip = true;
+						break;
+					}
+				}
+			}
+			if (skip)
+				continue;
+			if (maximum_minimum)
+			{
+				if (first)
+					value = modifier_value;
+				else
+					value = MIN(value, modifier_value);
+			}
+			else
+				value += modifier_value;
+			first = false;
 		}
 		
 		float tiebreaker_score = 0.0;
@@ -4575,6 +4665,7 @@ buffer genieGenerateNextEffectWishes()
 		int set;
 		boolean is_percent;
 		string image;
+		boolean maximum_minimum;
 	};
 	ModifierButtonEntry ModifierButtonEntryMake(string display_name, boolean [string] modifiers, int set, boolean is_percent, string image)
 	{
@@ -4633,9 +4724,9 @@ buffer genieGenerateNextEffectWishes()
 	modifier_buttons.listAppend(ModifierButtonEntryMake("meat", "Meat Drop", 0, true, "itemimages/meat.gif"));
 	modifier_buttons.listAppend(ModifierButtonEntryMake("item", "Item Drop", 0, true, "itemimages/potion9.gif"));
 	
-	GenieBestEffectResult best_effect_result_muscle = findBestEffectForModifiers($strings[muscle percent], false, effects_we_can_obtain_otherwise, valid_effects);
-	GenieBestEffectResult best_effect_result_mysticality = findBestEffectForModifiers($strings[mysticality percent], false, effects_we_can_obtain_otherwise, valid_effects);
-	GenieBestEffectResult best_effect_result_moxie = findBestEffectForModifiers($strings[moxie percent], false, effects_we_can_obtain_otherwise, valid_effects);
+	GenieBestEffectResult best_effect_result_muscle = findBestEffectForModifiers($strings[muscle percent], false, effects_we_can_obtain_otherwise, valid_effects, false);
+	GenieBestEffectResult best_effect_result_mysticality = findBestEffectForModifiers($strings[mysticality percent], false, effects_we_can_obtain_otherwise, valid_effects, false);
+	GenieBestEffectResult best_effect_result_moxie = findBestEffectForModifiers($strings[moxie percent], false, effects_we_can_obtain_otherwise, valid_effects, false);
 	
 	if (best_effect_result_muscle.e == best_effect_result_mysticality.e && best_effect_result_muscle.e == best_effect_result_moxie.e)
 	{
@@ -4663,6 +4754,7 @@ buffer genieGenerateNextEffectWishes()
 		prismatic_damage_modifiers[e + " Spell Damage"] = true;
 	}
 	modifier_buttons.listAppend(ModifierButtonEntryMake("Prismatic dmg", prismatic_damage_modifiers, 0, false, "itemimages/rrainbow.gif"));
+	modifier_buttons[modifier_buttons.count() - 1].maximum_minimum = true;
 	modifier_buttons.listAppend(ModifierButtonEntryMake("HP", "Maximum HP Percent", 1, true, "itemimages/strboost.gif"));
 	modifier_buttons.listAppend(ModifierButtonEntryMake("HP", "Maximum HP", 1, false, "itemimages/strboost.gif"));
 	if (my_primestat() == $stat[muscle])
@@ -4732,7 +4824,7 @@ buffer genieGenerateNextEffectWishes()
 			should_be_negative = true;
 		/*if (entry.display_name == "familiar weight" || entry.display_name == "ML")
 			is_percent = false;*/
-		GenieBestEffectResult best_effect_result = findBestEffectForModifiers(entry.modifiers, should_be_negative, effects_we_can_obtain_otherwise, valid_effects);
+		GenieBestEffectResult best_effect_result = findBestEffectForModifiers(entry.modifiers, should_be_negative, effects_we_can_obtain_otherwise, valid_effects, entry.maximum_minimum);
 		
 		//print_html(entry.display_name + ": " + best_effect);
 
