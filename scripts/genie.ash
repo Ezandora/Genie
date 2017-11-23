@@ -269,6 +269,16 @@ boolean Vec2fValueInRange(Vec2f v, float value)
     return false;
 }
 
+Vec2f Vec2fMultiply(Vec2f v, float c)
+{
+	return Vec2fMake(v.x * c, v.y * c);
+}
+Vec2f Vec2fAdd(Vec2f v, float c)
+{
+    return Vec2fMake(v.x + c, v.y + c);
+}
+
+
 
 string Vec2fDescription(Vec2f v)
 {
@@ -1868,7 +1878,7 @@ item get_property_item(string property)
 }
 
 
-string __genie_version = "2.0.6";
+string __genie_version = "2.0.7";
 
 string removeFirstWord(string line)
 {
