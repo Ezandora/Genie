@@ -14,7 +14,7 @@ Then restart mafia, maybe.
 
 Screenshots
 ----------------
-[![Educate](https://raw.github.com/Ezandora/Genie/master/images/genie2.99999repeating.png)](https://raw.github.com/Ezandora/Genie/master/images/genie2.99999repeating.png)
+[![Genie](https://raw.github.com/Ezandora/Genie/master/images/genie2.99999repeating.png)](https://raw.github.com/Ezandora/Genie/master/images/genie2.99999repeating.png)
 
 Notes
 ----------------
