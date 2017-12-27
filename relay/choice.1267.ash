@@ -1,7 +1,7 @@
 import "relay/choice.ash";
 
 
-string __genie_version = "2.0.8";
+string __genie_version = "2.1";
 
 //Allows error checking. The intention behind this design is Errors are passed in to a method. The method then sets the error if anything went wrong.
 record Error
@@ -3937,6 +3937,101 @@ int licenseToAdventureSocialCapitalAvailable()
     
     return total_social_capital - social_capital_used;
 }
+//Allows fast querying of which effects have which numeric_modifier()s.
+
+static
+{
+	boolean [effect][string] __modifiers_for_effect;
+	boolean [string][effect] __effects_for_modifiers;
+	boolean [effect] __effect_contains_non_constant_modifiers; //meaning, numeric_modifier() cannot be cached
+}
+void initialiseModifiers()
+{
+	if (__modifiers_for_effect.count() != 0) return;
+	//boolean [string] modifier_types;
+	//boolean [string] modifier_values;
+	foreach e in $effects[]
+	{
+		string string_modifiers = e.string_modifier("Modifiers");
+        if (string_modifiers == "") continue;
+        if (string_modifiers.contains_text("Avatar: ")) continue; //FIXME parse properly?
+        string [int] first_level_split = string_modifiers.split_string(", ");
+        
+        foreach key, entry in first_level_split
+        {
+        	//print_html(entry);
+            //if (!entry.contains_text(":"))
+            
+            string modifier_type;
+            string modifier_value;
+            if (entry.contains_text(": "))
+            {
+            	string [int] entry_split = entry.split_string(": ");
+                modifier_type = entry_split[0];
+                modifier_value = entry_split[1];
+            }
+            else
+            	modifier_type = entry;
+            
+            
+            string modifier_type_converted = modifier_type;
+            
+            //convert modifier_type to modifier_type_converted:
+            //FIXME is this all of them?
+            if (modifier_type_converted == "Combat Rate (Underwater)")
+            	modifier_type_converted = "Underwater Combat Rate";
+            else if (modifier_type_converted == "Experience (familiar)")
+                modifier_type_converted = "Familiar Experience";
+            else if (modifier_type_converted == "Experience (Moxie)")
+                modifier_type_converted = "Moxie Experience";
+            else if (modifier_type_converted == "Experience (Muscle)")
+                modifier_type_converted = "Muscle Experience";
+            else if (modifier_type_converted == "Experience (Mysticality)")
+                modifier_type_converted = "Mysticality Experience";
+            else if (modifier_type_converted == "Experience Percent (Moxie)")
+                modifier_type_converted = "Moxie Experience Percent";
+            else if (modifier_type_converted == "Experience Percent (Muscle)")
+                modifier_type_converted = "Muscle Experience Percent";
+            else if (modifier_type_converted == "Experience Percent (Mysticality)")
+                modifier_type_converted = "Mysticality Experience Percent";
+            else if (modifier_type_converted == "Mana Cost (stackable)")
+                modifier_type_converted = "Stackable Mana Cost";
+            else if (modifier_type_converted == "Familiar Weight (hidden)")
+                modifier_type_converted = "Hidden Familiar Weight";
+            else if (modifier_type_converted == "Meat Drop (sporadic)")
+                modifier_type_converted = "Sporadic Meat Drop";
+            else if (modifier_type_converted == "Item Drop (sporadic)")
+                modifier_type_converted = "Sporadic Item Drop";
+            
+            modifier_type_converted = modifier_type_converted.to_lower_case();
+            __modifiers_for_effect[e][modifier_type_converted] = true;
+            __effects_for_modifiers[modifier_type_converted][e] = true;
+            if (modifier_value.contains_text("[") || modifier_value.contains_text("\""))
+            	__effect_contains_non_constant_modifiers[e] = true;
+            
+            /*if (e.numeric_modifier(modifier_type_converted) == 0.0 && modifier_value.length() > 0 && e.string_modifier(modifier_type_converted) == "")// && !__effect_contains_non_constant_modifiers[e])
+            {
+            	//print_html("No match on \"" + modifier_type_converted + "\"");
+                print_html("No match on \"" + modifier_type_converted + "\" for " + e + " (" + string_modifiers + ")");
+            }*/
+            //modifier_types[modifier_type] = true;
+            //modifier_values[modifier_value] = true;
+        }
+        //return;
+	}
+	/*print_html("Types:");
+	foreach type in modifier_types
+	{
+		print_html(type);
+	}
+	print_html("");
+    print_html("Values:");
+    foreach value in modifier_values
+    {
+        print_html(value);
+    }*/
+}
+initialiseModifiers();
 
 
 //Quest status stores all/most of our quest information in an internal format that's easier to understand.
@@ -4093,18 +4188,29 @@ int bestModForTableCount(int count)
 	return best_mod;
 }
 
+static
+{
+	monster [int] __genie_valid_monster_list_first_pass_monsters;
+}
+
 monster [int] genieGenerateValidMonsterList()
 {
 	monster [int] first_pass_monsters;
-	foreach m in $monsters[]
+	if (__genie_valid_monster_list_first_pass_monsters.count() == 0)
 	{
-		if (m.boss)
-			continue;
-		if (m.attributes.contains_text("ULTRARARE")) continue;
-		if (__genie_invalid_monsters[m]) continue;
-		first_pass_monsters.listAppend(m);
+		foreach m in $monsters[]
+		{
+			if (m.boss)
+				continue;
+			if (m.attributes.contains_text("ULTRARARE")) continue;
+			if (__genie_invalid_monsters[m]) continue;
+			first_pass_monsters.listAppend(m);
+		}
+		sort first_pass_monsters by value.to_string().to_lower_case();
+		__genie_valid_monster_list_first_pass_monsters = first_pass_monsters;
 	}
-	sort first_pass_monsters by value.to_string().to_lower_case();
+	else
+		first_pass_monsters = __genie_valid_monster_list_first_pass_monsters;
 	
 	//Now order monsters:
 	monster [int] early_monster_order;
@@ -4168,7 +4274,7 @@ monster [int] genieGenerateValidMonsterList()
 	{
 		if (out_monsters[m]) continue;
 		out.listAppend(m);
-		out_monsters[m] = true;
+		//out_monsters[m] = true;
 	}
 	
 	return out;
@@ -4179,19 +4285,30 @@ boolean effectIsAvatarPotion(effect e)
 	return e.string_modifier("Avatar") != "";
 }
 
+static
+{
+	boolean [effect] __genie_valid_effects;
+	effect [int] __genie_valid_effect_list;
+	effect [int] __genie_valid_avatar_potions;
+}
+
 boolean [effect] genieValidEffects()
 {
-	boolean [effect] effects;
+	if (__genie_valid_effects.count() > 0)
+		return __genie_valid_effects;
 	foreach e in $effects[]
 	{
 		if (__genie_invalid_effects contains e) continue; //'
-		effects[e] = true;
+		__genie_valid_effects[e] = true;
 	}
-	return effects;
+	return __genie_valid_effects;
 }
 
 effect [int] genieGenerateValidEffectList()
 {
+	if (__genie_valid_effect_list.count() > 0)
+		return __genie_valid_effect_list;
+	
 	effect [int] first_pass_effects;
 	effect [int] second_pass_effects;
 	foreach e in genieValidEffects()
@@ -4240,12 +4357,14 @@ effect [int] genieGenerateValidEffectList()
 			out_effects[e] = true;
 		}
 	}	
-	
+	__genie_valid_effect_list = out;
 	return out;
 }
 
 effect [int] genieGenerateValidAvatarList()
 {
+	if (__genie_valid_avatar_potions.count() > 0)
+		return __genie_valid_avatar_potions;
 	effect [int] out;
 	foreach e in $effects[]
 	{
@@ -4253,6 +4372,7 @@ effect [int] genieGenerateValidAvatarList()
 		out.listAppend(e);
 	}
 	sort out by value.string_modifier("Avatar");
+	__genie_valid_avatar_potions = out;
 	return out;
 }
 
@@ -4406,6 +4526,7 @@ static
 {
 	buffer [effect] __genie_saved_effect_descriptions;
 }
+
 initialiseGenieEffectDescriptions();
 buffer genieGenerateEffectDescription(effect e)
 {
@@ -4413,7 +4534,8 @@ buffer genieGenerateEffectDescription(effect e)
 	buffer out;
 	out.append(e);
 	boolean first = true;
-	foreach modifier in __numeric_modifier_names
+	//foreach modifier in __numeric_modifier_names
+	foreach modifier in __modifiers_for_effect[e]
 	{
 		float v = e.numeric_modifier(modifier);
 		if (v == 0.0) continue;
@@ -4454,7 +4576,8 @@ buffer genieGenerateEffectDescription(effect e)
 	}
 	if (!first)
 		out.append(")");
-	__genie_saved_effect_descriptions[e] = out;
+	if (!__effect_contains_non_constant_modifiers[e]) //always regenerate dynamic effects
+		__genie_saved_effect_descriptions[e] = out;
 	return out;
 }
 
@@ -4575,87 +4698,127 @@ Record GenieBestEffectResult
 	effect e;
 	float value;
 };
-GenieBestEffectResult findBestEffectForModifiers(boolean [string] modifiers, boolean should_be_negative, boolean [effect] effects_we_can_obtain_otherwise, boolean [effect] valid_effects, boolean maximum_minimum)
+
+Record GenieScoreValueResult
 {
+	float score;
+	float value;
+};
+
+GenieScoreValueResult genieScoreAndValueForEffect(boolean [string] modifiers, effect e, boolean maximum_minimum)
+{
+	float value = 0.0; //FIXME muscle/myst/etc
+	
+	boolean first = true;
+	foreach modifier in modifiers
+	{
+		//if (!__modifiers_for_effect[e][modifier]) continue;
+		float modifier_value = e.numeric_modifier(modifier);
+		boolean skip = false;
+		foreach e2 in $elements[hot,stench,spooky,cold,sleaze]
+		{
+			string flat_damage_lookup = e2 + " Damage";
+			string spell_damage_lookup = e2 + " Spell Damage";
+			if (maximum_minimum && modifiers[flat_damage_lookup] && modifiers[spell_damage_lookup])
+			{
+				if (modifier == flat_damage_lookup)
+				{
+					modifier_value += e.numeric_modifier(spell_damage_lookup);
+				}
+				else if (modifier == spell_damage_lookup)
+				{
+					skip = true;
+					break;
+				}
+			}
+		}
+		if (skip)
+			continue;
+		if (maximum_minimum)
+		{
+			if (first)
+				value = modifier_value;
+			else
+				value = MIN(value, modifier_value);
+		}
+		else
+			value += modifier_value;
+		first = false;
+	}
+	
+	float tiebreaker_score = 0.0;
+	foreach s in $strings[Item Drop,Meat Drop]
+	{
+		if (modifiers[s]) continue;
+		tiebreaker_score += e.numeric_modifier(s) / 10000.0;
+	}
+	foreach s in $strings[HP Regen Max,Muscle,Mysticality,Moxie]
+		tiebreaker_score += e.numeric_modifier(s) * 0.00000000001; //tiebreak why not.
+	if (modifiers["muscle percent"] || modifiers["mysticality percent"] || modifiers["moxie percent"])
+	{
+		foreach s in $strings[muscle percent,mysticality percent,moxie percent]
+		{
+			if (!modifiers[s])
+			{
+				tiebreaker_score += e.numeric_modifier(s) / 10000.0;
+			}
+		}
+	}
+	
+	float score = value + MAX(-1.0, MIN(1.0, tiebreaker_score));
+	GenieScoreValueResult result;
+	result.score = score;
+	result.value = value;
+	return result;
+}
+
+GenieBestEffectResult findBestEffectForModifiers(boolean [string] modifiers_in, boolean should_be_negative, boolean [effect] effects_we_can_obtain_otherwise, boolean [effect] valid_effects, boolean maximum_minimum)
+{
+	boolean [string] modifiers;
+	foreach modifier in modifiers_in
+		modifiers[modifier.to_lower_case()] = modifiers_in[modifier];
 	float best_effect_score = 0.0;
 	float best_effect_value = 0.0;
 	effect best_effect = $effect[none];
-	foreach e in valid_effects
+	
+	
+	//foreach e in valid_effects
+	foreach m in modifiers
 	{
-		if (effects_we_can_obtain_otherwise[e]) continue;
-		if (e.have_effect() > 0) continue;
-		float value; //FIXME muscle/myst/etc
-		
-		boolean first = true;
-		foreach modifier in modifiers
+		foreach e in __effects_for_modifiers[m]
 		{
-			float modifier_value = e.numeric_modifier(modifier);
-			boolean skip = false;
-			foreach e2 in $elements[hot,stench,spooky,cold,sleaze]
+			if (effects_we_can_obtain_otherwise[e]) continue;
+			if (!valid_effects[e]) continue;
+			/*boolean relevant = false;
+			foreach modifier in modifiers
 			{
-				string flat_damage_lookup = e2 + " Damage";
-				string spell_damage_lookup = e2 + " Spell Damage";
-				if (maximum_minimum && modifiers[flat_damage_lookup] && modifiers[spell_damage_lookup])
+				if (__modifiers_for_effect[e][modifier])
 				{
-					if (modifier == flat_damage_lookup)
-					{
-						modifier_value += e.numeric_modifier(spell_damage_lookup);
-					}
-					else if (modifier == spell_damage_lookup)
-					{
-						skip = true;
-						break;
-					}
+					relevant = true;
 				}
 			}
-			if (skip)
-				continue;
-			if (maximum_minimum)
-			{
-				if (first)
-					value = modifier_value;
-				else
-					value = MIN(value, modifier_value);
-			}
-			else
-				value += modifier_value;
-			first = false;
-		}
+			if (!relevant)
+				continue;*/
+			if (e.have_effect() > 0) continue;
 		
-		float tiebreaker_score = 0.0;
-		foreach s in $strings[Item Drop,Meat Drop]
-		{
-			if (modifiers[s]) continue;
-			tiebreaker_score += e.numeric_modifier(s) / 10000.0;
-		}
-		foreach s in $strings[HP Regen Max,Muscle,Mysticality,Moxie]
-			tiebreaker_score += e.numeric_modifier(s) * 0.00000000001; //tiebreak why not.
-		if (modifiers["muscle percent"] || modifiers["mysticality percent"] || modifiers["moxie percent"])
-		{
-			foreach s in $strings[muscle percent,mysticality percent,moxie percent]
+			GenieScoreValueResult score_and_value = genieScoreAndValueForEffect(modifiers, e, maximum_minimum);
+			float score = score_and_value.score;
+			float value = score_and_value.value;
+			if (should_be_negative)
 			{
-				if (!modifiers[s])
+				if (score < best_effect_score)
 				{
-					tiebreaker_score += e.numeric_modifier(s) / 10000.0;
+					best_effect_score = score;
+					best_effect_value = value;
+					best_effect = e;
 				}
 			}
-		}
-		
-		float score = value + MAX(-1.0, MIN(1.0, tiebreaker_score));
-		if (should_be_negative)
-		{
-			if (score < best_effect_score)
+			else if (score > best_effect_score)
 			{
 				best_effect_score = score;
 				best_effect_value = value;
 				best_effect = e;
 			}
-		}
-		else if (score > best_effect_score)
-		{
-			best_effect_score = score;
-			best_effect_value = value;
-			best_effect = e;
 		}
 	}
 	GenieBestEffectResult result;
