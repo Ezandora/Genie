@@ -1,7 +1,7 @@
 import "relay/choice.ash";
 
 
-string __genie_version = "2.1";
+string __genie_version = "2.1.1";
 
 //Allows error checking. The intention behind this design is Errors are passed in to a method. The method then sets the error if anything went wrong.
 record Error
@@ -3417,7 +3417,7 @@ int stringCountSubstringMatches(string str, string substring)
 
 effect to_effect(item it)
 {
-	return effect_modifier(it, "effect");
+	return it.effect_modifier("effect");
 }
 
 
@@ -3939,6 +3939,7 @@ int licenseToAdventureSocialCapitalAvailable()
 }
 //Allows fast querying of which effects have which numeric_modifier()s.
 
+//Modifiers are lower case.
 static
 {
 	boolean [effect][string] __modifiers_for_effect;
@@ -4163,7 +4164,7 @@ boolean [string] __numeric_modifier_names = $strings[Familiar Weight,Monster Lev
 
 boolean [monster] __genie_invalid_monsters = $monsters[ninja snowman assassin,modern zmobie,big swarm of ghuol whelps,giant swarm of ghuol whelps,swarm of ghuol whelps,dirty old lihc];
 
-boolean [effect] __genie_invalid_effects = $effects[jukebox hero,Juicy Boost,Meteor Showered,Steely-eyed squint,Blue Eyed Devil,Cereal Killer,Nearly All-Natural,Amazing,Throwing some shade,A rose by any other material,Gaze of the Gazelle,East of Eaten,Robot Friends,Smart Drunk,Margamergency,Pajama Party,Rumpel-Pumped,Song of Battle,Song of Solitude,Buy!\  Sell!\  Buy!\  Sell!,eldritch attunement,The Inquisitor's unknown effect,Filthworm Drone Stench,Filthworm Guard Stench,Filthworm Larva Stench,Green Peace,Red Menace,Video... Games?,things man was not meant to eat,Whitesloshed,thrice-cursed,bendin' hell,Synthesis: Hot,Synthesis: Cold,Synthesis: Pungent,Synthesis: Scary,Synthesis: Greasy,Synthesis: Strong,Synthesis: Smart,Synthesis: Cool,Synthesis: Hardy,Synthesis: Energy,Synthesis: Greed,Synthesis: Collection,Synthesis: Movement,Synthesis: Learning,Synthesis: Style,The Good Salmonella,Giant Growth,Lovebotamy,Open Heart Surgery,Wandering Eye Surgery,gar-ish,Puissant Pressure,Perspicacious Pressure,Pulchritudinous Pressure,It's Good To Be Royal!,The Fire Inside,Puzzle Champ,The Royal We,Hotform,Coldform,Sleazeform,Spookyform,Stenchform,A Hole in the World,Bored With Explosions,thanksgetting,Barrel of Laughs,Beer Barrel Polka,Superdrifting,Covetin' Drunk,All Wound Up,Driving Observantly,Driving Waterproofly,Bow-Legged Swagger,First Blood Kiwi,You've Got a Stew Going!,Shepherd's Breath,Of Course It Looks Great,Doing The Hustle,Fortune of the Wheel,Shelter of Shed,Hot Sweat,Cold Sweat,Rank Sweat,Black Sweat,Flop Sweat,Mark of Candy Cain,Black Day,What Are The Odds!?,Dancin' Drunk, School Spirited,Muffled,Sour Grapes,Song of Fortune,Pork Barrel,Ashen,Brooding,Purple Tongue,Green Tongue,Orange Tongue,Red Tongue,Blue Tongue,Black Tongue,Cupcake of Choice,The Cupcake of Wrath,Shiny Happy Cupcake,Your Cupcake Senses Are Tingling,Tiny Bubbles in the Cupcake,Broken Heart,Fiery Heart,Cold Hearted,Sweet Heart,Withered Heart,Lustful Heart,Pasta Eyeball,Cowlick,It's Ridiculous,Dangerous Zone Song,Tiffany's Breakfast,Flashy Dance Song,Pet Shop Song,Dark Orchestral Song,Bounty of Renenutet,Octolus Gift,Magnetized Ears,Lucky Struck,Drunk and Avuncular,Ministrations in the Dark,Record Hunger,SuperStar,Everything Looks Blue,Everything Looks Red,Everything Looks Yellow]; //'
+boolean [effect] __genie_invalid_effects = $effects[jukebox hero,Juicy Boost,Meteor Showered,Steely-eyed squint,Blue Eyed Devil,Cereal Killer,Nearly All-Natural,Amazing,Throwing some shade,A rose by any other material,Gaze of the Gazelle,East of Eaten,Robot Friends,Smart Drunk,Margamergency,Pajama Party,Rumpel-Pumped,Song of Battle,Song of Solitude,Buy!\  Sell!\  Buy!\  Sell!,eldritch attunement,The Inquisitor's unknown effect,Filthworm Drone Stench,Filthworm Guard Stench,Filthworm Larva Stench,Green Peace,Red Menace,Video... Games?,things man was not meant to eat,Whitesloshed,thrice-cursed,bendin' hell,Synthesis: Hot,Synthesis: Cold,Synthesis: Pungent,Synthesis: Scary,Synthesis: Greasy,Synthesis: Strong,Synthesis: Smart,Synthesis: Cool,Synthesis: Hardy,Synthesis: Energy,Synthesis: Greed,Synthesis: Collection,Synthesis: Movement,Synthesis: Learning,Synthesis: Style,The Good Salmonella,Giant Growth,Lovebotamy,Open Heart Surgery,Wandering Eye Surgery,gar-ish,Puissant Pressure,Perspicacious Pressure,Pulchritudinous Pressure,It's Good To Be Royal!,The Fire Inside,Puzzle Champ,The Royal We,Hotform,Coldform,Sleazeform,Spookyform,Stenchform,A Hole in the World,Bored With Explosions,thanksgetting,Barrel of Laughs,Beer Barrel Polka,Superdrifting,Covetin' Drunk,All Wound Up,Driving Observantly,Driving Waterproofly,Bow-Legged Swagger,First Blood Kiwi,You've Got a Stew Going!,Shepherd's Breath,Of Course It Looks Great,Doing The Hustle,Fortune of the Wheel,Shelter of Shed,Hot Sweat,Cold Sweat,Rank Sweat,Black Sweat,Flop Sweat,Mark of Candy Cain,Black Day,What Are The Odds!?,Dancin' Drunk, School Spirited,Muffled,Sour Grapes,Song of Fortune,Pork Barrel,Ashen,Brooding,Purple Tongue,Green Tongue,Orange Tongue,Red Tongue,Blue Tongue,Black Tongue,Cupcake of Choice,The Cupcake of Wrath,Shiny Happy Cupcake,Your Cupcake Senses Are Tingling,Tiny Bubbles in the Cupcake,Broken Heart,Fiery Heart,Cold Hearted,Sweet Heart,Withered Heart,Lustful Heart,Pasta Eyeball,Cowlick,It's Ridiculous,Dangerous Zone Song,Tiffany's Breakfast,Flashy Dance Song,Pet Shop Song,Dark Orchestral Song,Bounty of Renenutet,Octolus Gift,Magnetized Ears,Lucky Struck,Drunk and Avuncular,Ministrations in the Dark,Record Hunger,SuperStar,Everything Looks Blue,Everything Looks Red,Everything Looks Yellow,Snow Fortified]; //'
 //Works: Driving Wastefully, Driving Stealthily, rest untested
 
 
@@ -4386,7 +4387,7 @@ buffer generateSelectionDropdown(string [int] descriptions, string [int] ids, st
 	{
 		out.append("<option value=\"");
 		//out.append(ids[key].replace_string("\"", "\\\""));
-		out.append(ids[key].replace_string("\"", ""));
+		out.append(ids[key].replace_string("\"", "").entity_encode());
 		out.append("\"");
 		string replacement_image = replacement_images[key];
 		if (replacement_image != "")
@@ -4510,16 +4511,16 @@ string [string] __effect_descriptions_modifier_short_description_mapping;
 
 void initialiseGenieEffectDescriptions()
 {
-	__effect_descriptions_modifier_is_percent["Item Drop"] = true;
-	__effect_descriptions_modifier_is_percent["Booze Drop"] = true;
-	__effect_descriptions_modifier_is_percent["Food Drop"] = true;
-	__effect_descriptions_modifier_is_percent["Meat Drop"] = true;
-	__effect_descriptions_modifier_is_percent["Initiative"] = true;
-	__effect_descriptions_modifier_is_percent["Combat Rate"] = true;
-	__effect_descriptions_modifier_short_description_mapping["Item Drop"] = "item";
-	__effect_descriptions_modifier_short_description_mapping["Meat Drop"] = "meat";
-	__effect_descriptions_modifier_short_description_mapping["Combat Rate"] = "combat";
-	__effect_descriptions_modifier_short_description_mapping["Initiative"] = "init";
+	__effect_descriptions_modifier_is_percent["item drop"] = true;
+	__effect_descriptions_modifier_is_percent["booze drop"] = true;
+	__effect_descriptions_modifier_is_percent["food drop"] = true;
+	__effect_descriptions_modifier_is_percent["meat drop"] = true;
+	__effect_descriptions_modifier_is_percent["initiative"] = true;
+	__effect_descriptions_modifier_is_percent["combat rate"] = true;
+	__effect_descriptions_modifier_short_description_mapping["item drop"] = "item";
+	__effect_descriptions_modifier_short_description_mapping["meat drop"] = "meat";
+	__effect_descriptions_modifier_short_description_mapping["combat rate"] = "combat";
+	__effect_descriptions_modifier_short_description_mapping["initiative"] = "init";
 }
 
 static
