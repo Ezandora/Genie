@@ -672,6 +672,14 @@ void listPrepend(location [int] list, location entry)
 	list[position] = entry;
 }
 
+void listPrepend(item [int] list, item entry)
+{
+    int position = 0;
+    while (list contains position)
+        position -= 1;
+    list[position] = entry;
+}
+
 
 void listClear(string [int] list)
 {
@@ -1878,7 +1886,7 @@ item get_property_item(string property)
 }
 
 
-string __genie_version = "2.1.2";
+string __genie_version = "2.2";
 
 string removeFirstWord(string line)
 {
