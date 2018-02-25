@@ -36,6 +36,7 @@ function genieButtonClicked(id, command, hash)
 			//console.log("Want effect \"" + desired_target + "\"");
 		}
 	}
+	wish = wish.replace(/\\\"/g, "\"");
 	
 	if (wish != "")
 		console.log("Wishing for \"" + wish + "\".");// from " + id + ".");
