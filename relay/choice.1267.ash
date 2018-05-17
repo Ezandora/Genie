@@ -1,7 +1,7 @@
 import "relay/choice.ash";
 
 
-string __genie_version = "2.2.2";
+string __genie_version = "2.2.3";
 
 //Allows error checking. The intention behind this design is Errors are passed in to a method. The method then sets the error if anything went wrong.
 record Error
@@ -5060,7 +5060,7 @@ buffer genieGenerateNextEffectWishes()
 	{
 		effect e = s.to_effect();
 		if (e == $effect[none]) continue;
-		if (s.have_skill() && s.mp_cost() <= my_maxmp())
+		if (s.skill_is_usable() && s.mp_cost() <= my_maxmp())
 			effects_we_can_obtain_otherwise[e] = true;
 	}
 	if (!can_interact())
@@ -5224,12 +5224,12 @@ buffer genieGenerateSecondaryHardcodedWishes()
 	}
 	if (inebriety_limit() - my_inebriety() >= 0)
 	{
-		if (!$skill[the ode to booze].have_skill())
+		if (!$skill[the ode to booze].skill_is_usable())
 			desired_effects[$effect[ode to booze]] = true;
 		//desired_effects[$effect[Beer Barrel Polka]] = true;
 		//effect_descriptions[$effect[Beer Barrel Polka]] = "+4 adv from booze";
 	}
-	if (!($skill[Inigo's Incantation of Inspiration].have_skill() && $skill[Inigo's Incantation of Inspiration].is_unrestricted() && $effect[Inigo's Incantation of Inspiration].have_effect() == 0)) //'
+	if (!($skill[Inigo's Incantation of Inspiration].skill_is_usable() && $skill[Inigo's Incantation of Inspiration].is_unrestricted() && $effect[Inigo's Incantation of Inspiration].have_effect() == 0)) //'
 		desired_effects[$effect[Inigo's Incantation of Inspiration]] = true; //'
 	effect_descriptions[$effect[Inigo's Incantation of Inspiration]] = "craft for free"; //'
 	
