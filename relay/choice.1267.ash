@@ -1,7 +1,7 @@
 import "relay/choice.ash";
 
 
-string __genie_version = "2.2.3";
+string __genie_version = "2.2.4";
 
 //Allows error checking. The intention behind this design is Errors are passed in to a method. The method then sets the error if anything went wrong.
 record Error
@@ -2570,11 +2570,20 @@ boolean skill_is_usable(skill s)
         return false;
     if (!s.is_unrestricted())
         return false;
-    if (my_path_id() == PATH_G_LOVER && !s.contains_text("g") && !s.contains_text("G"))
+    if (my_path_id() == PATH_G_LOVER && (!s.passive || s == $skill[meteor lore]) && !s.contains_text("g") && !s.contains_text("G"))
     	return false;
     if ($skills[rapid prototyping] contains s)
         return $item[hand turkey outline].is_unrestricted();
     return true;
+}
+
+boolean a_skill_is_usable(boolean [skill] skills)
+{
+	foreach s in skills
+	{
+		if (s.skill_is_usable()) return true;
+	}
+	return false;
 }
 
 boolean item_is_usable(item it)
@@ -2583,6 +2592,8 @@ boolean item_is_usable(item it)
         return false;
     if (my_path_id() == PATH_G_LOVER && !it.contains_text("g") && !it.contains_text("G"))
         return false;
+    if (my_path_id() == PATH_BEES_HATE_YOU && (it.contains_text("b") || it.contains_text("B")))
+    	return false;
 	return true;
 }
 
@@ -5186,6 +5197,7 @@ buffer genieGenerateNextEffectWishes()
 			is_percent = false;*/
 		GenieBestEffectResult best_effect_result = findBestEffectForModifiers(entry.modifiers, should_be_negative, effects_we_can_obtain_otherwise, valid_effects, entry.maximum_minimum);
 		
+		if (best_effect_result.e == $effect[none]) continue;
 		//print_html(entry.display_name + ": " + best_effect);
 
 		if (buttons_written % bestModForTableCount(entries_per_set[entry.set]) == 0 && buttons_written > 0)
