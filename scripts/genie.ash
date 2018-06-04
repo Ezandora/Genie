@@ -277,6 +277,10 @@ Vec2f Vec2fAdd(Vec2f v, float c)
 {
     return Vec2fMake(v.x + c, v.y + c);
 }
+float Vec2fAverage(Vec2f v)
+{
+    return (v.x + v.y) * 0.5;
+}
 
 
 
@@ -1886,7 +1890,7 @@ item get_property_item(string property)
 }
 
 
-string __genie_version = "2.2.5";
+string __genie_version = "2.2.6";
 
 string removeFirstWord(string line)
 {
