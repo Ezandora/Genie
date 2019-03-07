@@ -779,6 +779,12 @@ familiar [int] listMakeBlankFamiliar()
 	return result;
 }
 
+int [int] listMakeBlankInt()
+{
+    int [int] result;
+    return result;
+}
+
 
 
 
@@ -1065,7 +1071,6 @@ string listJoinComponents(string [int] list, string joining_string)
 {
 	return listJoinComponents(list, joining_string, "");
 }
-
 
 string listJoinComponents(item [int] list, string joining_string, string and_string)
 {
@@ -1890,7 +1895,7 @@ item get_property_item(string property)
 }
 
 
-string __genie_version = "2.2.10";
+string __genie_version = "2.2.11";
 
 string removeFirstWord(string line)
 {
