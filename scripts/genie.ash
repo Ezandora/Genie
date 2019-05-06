@@ -196,11 +196,16 @@ Vec2i Vec2iZero()
 	return Vec2iMake(0,0);
 }
 
-boolean Vec2iValueInRange(Vec2i v, int value)
+boolean Vec2iValueInInterval(Vec2i v, int value)
 {
     if (value >= v.x && value <= v.y)
         return true;
     return false;
+}
+
+boolean Vec2iValueInRange(Vec2i v, int value)
+{
+	return Vec2iValueInInterval(v, value);
 }
 
 boolean Vec2iEquals(Vec2i a, Vec2i b)
@@ -1349,6 +1354,29 @@ string [string] mapCopy(string [string] map)
     return result;
 }
 
+boolean mapsAreEqual(string [string] map1, string [string] map2)
+{
+	if (map1.count() != map2.count())
+	{
+        //print_html("map1.c = " + map1.count() + " which is not " + map2.count());
+		return false;
+    }
+	foreach key1, v in map1
+	{
+		if (!(map2 contains key1))
+        {
+        	//print_html("map2 lacks " + key1);
+        	return false;
+        }
+        if (map2[key1] != v)
+        {
+            //print_html("map2 v(" + map2[key1] + " does not equal " + key1 + " (" + v + ")");
+        	return false;
+        }
+	}
+	return true;
+}
+
 boolean [string] listInvert(string [int] list)
 {
 	boolean [string] result;
@@ -1895,7 +1923,7 @@ item get_property_item(string property)
 }
 
 
-string __genie_version = "2.2.12";
+string __genie_version = "2.2.13";
 
 string removeFirstWord(string line)
 {
