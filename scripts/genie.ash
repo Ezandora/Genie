@@ -1522,6 +1522,18 @@ int listKeyForIndex(monster [int] list, int index)
 	return -1;
 }
 
+int listKeyForIndex(int [int] list, int index)
+{
+    int i = 0;
+    foreach key in list
+    {
+        if (i == index)
+            return key;
+        i += 1;
+    }
+    return -1;
+}
+
 int llistKeyForIndex(string [int][int] list, int index)
 {
 	int i = 0;
@@ -1576,6 +1588,15 @@ monster listGetRandomObject(monster [int] list)
         return $monster[none];
     if (list.count() == 1)
     	return list[listKeyForIndex(list, 0)];
+    return list[listKeyForIndex(list, random(list.count()))];
+}
+
+int listGetRandomObject(int [int] list)
+{
+    if (list.count() == 0)
+        return -1;
+    if (list.count() == 1)
+        return list[listKeyForIndex(list, 0)];
     return list[listKeyForIndex(list, random(list.count()))];
 }
 
@@ -1823,12 +1844,18 @@ string capitaliseFirstLetter(string v)
 	return buf.to_string();
 }
 
+//shadowing; this may override ints
 string pluralise(float value, string non_plural, string plural)
 {
+	string value_out = "";
+	if (value.to_int() == value)
+		value_out = value.to_int();
+    else
+    	value_out = value;
 	if (value == 1.0)
-		return value + " " + non_plural;
+		return value_out + " " + non_plural;
 	else
-		return value + " " + plural;
+		return value_out + " " + plural;
 }
 
 string pluralise(int value, string non_plural, string plural)
@@ -1923,7 +1950,7 @@ item get_property_item(string property)
 }
 
 
-string __genie_version = "2.2.13";
+string __genie_version = "2.2.14";
 
 string removeFirstWord(string line)
 {
