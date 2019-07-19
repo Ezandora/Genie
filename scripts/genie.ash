@@ -1950,7 +1950,7 @@ item get_property_item(string property)
 }
 
 
-string __genie_version = "2.2.14";
+string __genie_version = "2.2.15";
 
 string removeFirstWord(string line)
 {
