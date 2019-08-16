@@ -1715,6 +1715,7 @@ int [int] stringToIntIntList(string input, string delimiter)
 		return out;
 	foreach key, v in input.split_string(delimiter)
 	{
+		if (v == "") continue;
 		out.listAppend(v.to_int());
 	}
 	return out;
@@ -1950,7 +1951,7 @@ item get_property_item(string property)
 }
 
 
-string __genie_version = "2.2.15";
+string __genie_version = "2.2.16";
 
 string removeFirstWord(string line)
 {
