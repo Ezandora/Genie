@@ -1262,6 +1262,14 @@ boolean [monster] listCopy(boolean [monster] l)
     return result;
 }
 
+int [item] listCopy(int [item] l)
+{
+    int [item] result;
+    foreach key in l
+        result[key] = l[key];
+    return result;
+}
+
 //Strict, in this case, means the keys start at 0, and go up by one per entry. This allows easy consistent access
 boolean listKeysMeetStrictRequirements(string [int] list)
 {
@@ -1726,6 +1734,13 @@ int [int] stringToIntIntList(string input)
 	return stringToIntIntList(input, ",");
 }
 
+boolean [location] locationToLocationMap(location l)
+{
+	boolean [location] map;
+	map[l] = true;
+	return map;
+}
+
 buffer to_buffer(string str)
 {
 	buffer result;
@@ -1951,7 +1966,7 @@ item get_property_item(string property)
 }
 
 
-string __genie_version = "2.2.16";
+string __genie_version = "2.2.17";
 
 string removeFirstWord(string line)
 {

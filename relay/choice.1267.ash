@@ -1,7 +1,7 @@
 import "relay/choice.ash";
 
 
-string __genie_version = "2.2.16";
+string __genie_version = "2.2.17";
 
 //Allows error checking. The intention behind this design is Errors are passed in to a method. The method then sets the error if anything went wrong.
 record Error
@@ -1266,6 +1266,14 @@ boolean [monster] listCopy(boolean [monster] l)
     return result;
 }
 
+int [item] listCopy(int [item] l)
+{
+    int [item] result;
+    foreach key in l
+        result[key] = l[key];
+    return result;
+}
+
 //Strict, in this case, means the keys start at 0, and go up by one per entry. This allows easy consistent access
 boolean listKeysMeetStrictRequirements(string [int] list)
 {
@@ -1728,6 +1736,13 @@ int [int] stringToIntIntList(string input, string delimiter)
 int [int] stringToIntIntList(string input)
 {
 	return stringToIntIntList(input, ",");
+}
+
+boolean [location] locationToLocationMap(location l)
+{
+	boolean [location] map;
+	map[l] = true;
+	return map;
 }
 
 
@@ -2313,94 +2328,13 @@ static
     int PATH_EXPLOSIONS = 37;
     int PATH_EXPLODING = 37;
     int PATH_EXPLODED = 37;
-}
-
-
-int __my_path_id_cached = -11;
-
-int initialiseMyPathID()
-{
-    string path_name = my_path();
-    
-    if (path_name == "" || path_name == "None")
-        __my_path_id_cached = PATH_NONE;
-    else if (path_name == "Teetotaler")
-        __my_path_id_cached = PATH_TEETOTALER;
-    else if (path_name == "Boozetafarian")
-        __my_path_id_cached = PATH_BOOZETAFARIAN;
-    else if (path_name == "Oxygenarian")
-        __my_path_id_cached = PATH_OXYGENARIAN;
-    else if (path_name == "Bees Hate You")
-        __my_path_id_cached = PATH_BEES_HATE_YOU;
-    else if (path_name == "Way of the Surprising Fist")
-        __my_path_id_cached = PATH_WAY_OF_THE_SURPRISING_FIST;
-    else if (path_name == "Trendy")
-        __my_path_id_cached = PATH_TRENDY;
-    else if (path_name == "Avatar of Boris")
-        __my_path_id_cached = PATH_AVATAR_OF_BORIS;
-    else if (path_name == "Bugbear Invasion")
-        __my_path_id_cached = PATH_BUGBEAR_INVASION;
-    else if (path_name == "Zombie Slayer")
-        __my_path_id_cached = PATH_ZOMBIE_SLAYER;
-    else if (path_name == "Class Act")
-        __my_path_id_cached = PATH_CLASS_ACT;
-    else if (path_name == "Avatar of Jarlsberg")
-        __my_path_id_cached = PATH_AVATAR_OF_JARLSBERG;
-    else if (path_name == "BIG!")
-        __my_path_id_cached = PATH_BIG;
-    else if (path_name == "KOLHS")
-        __my_path_id_cached = PATH_KOLHS;
-    else if (path_name == "Class Act II: A Class For Pigs")
-        __my_path_id_cached = PATH_CLASS_ACT_2;
-    else if (path_name == "Avatar of Sneaky Pete")
-        __my_path_id_cached = PATH_AVATAR_OF_SNEAKY_PETE;
-    else if (path_name == "Slow and Steady")
-        __my_path_id_cached = PATH_SLOW_AND_STEADY;
-    else if (path_name == "Heavy Rains")
-        __my_path_id_cached = PATH_HEAVY_RAINS;
-    else if (path_name == "Picky")
-        __my_path_id_cached = PATH_PICKY;
-    else if (path_name == "Standard")
-        __my_path_id_cached = PATH_STANDARD;
-    else if (path_name == "Actually Ed the Undying")
-        __my_path_id_cached = PATH_ACTUALLY_ED_THE_UNDYING;
-    else if (path_name == "One Crazy Random Summer")
-        __my_path_id_cached = PATH_ONE_CRAZY_RANDOM_SUMMER;
-    else if (path_name == "Community Service" || path_name == "25")
-        __my_path_id_cached = PATH_COMMUNITY_SERVICE;
-    else if (path_name == "Avatar of West of Loathing")
-        __my_path_id_cached = PATH_AVATAR_OF_WEST_OF_LOATHING;
-    else if (path_name == "The Source")
-        __my_path_id_cached = PATH_THE_SOURCE;
-    else if (path_name == "Nuclear Autumn" || path_name == "28")
-        __my_path_id_cached = PATH_NUCLEAR_AUTUMN;
-    else if (path_name == "Gelatinous Noob")
-        __my_path_id_cached = PATH_GELATINOUS_NOOB;
-    else if (path_name == "License to Adventure")
-        __my_path_id_cached = PATH_LICENSE_TO_ADVENTURE;
-    else if (path_name == "Live. Ascend. Repeat.")
-        __my_path_id_cached = PATH_LIVE_ASCEND_REPEAT;
-    else if (path_name == "Pocket Familiars" || path_name == "32")
-        __my_path_id_cached = PATH_POCKET_FAMILIARS;
-    else if (path_name == "G-Lover" || path_name == "33")
-        __my_path_id_cached = PATH_G_LOVER;
-    else if (path_name == "Disguises Delimit" || path_name == 34)
-        __my_path_id_cached = PATH_DISGUISES_DELIMIT;
-    else if (path_name == "Dark Gyffte")
-        __my_path_id_cached = PATH_DARK_GYFFTE;
-    else if (path_name == "36" || path_name == "Two Crazy Random Summer")
-        __my_path_id_cached = PATH_2CRS;
-    else if (path_name == "37" || path_name == "Kingdom of Exploathing")
-    	__my_path_id_cached = PATH_EXPLOSION;
-    else
-        __my_path_id_cached = PATH_UNKNOWN;
-    return __my_path_id_cached;
-}
-initialiseMyPathID();
-
-int my_path_id()
-{
-    return __my_path_id_cached;
+    int PATH_OF_THE_PLUMBER = 38;
+    int PATH_PLUMBER = 38;
+    int PATH_LUIGI = 38;
+    int PATH_MAMA_LUIGI = 38;
+    int PATH_MARIO = 38;
+    int PATH_LOW_KEY_SUMMER = 39;
+    int PATH_LOKI = 39;
 }
 
 float numeric_modifier_replacement(item it, string modifier)
@@ -3018,18 +2952,39 @@ int substatsForLevel(int level)
 
 int availableFullness()
 {
-	return fullness_limit() - my_fullness();
+	int limit = fullness_limit();
+    if (my_path_id() == PATH_ACTUALLY_ED_THE_UNDYING && limit == 0 && $skill[Replacement Stomach].have_skill())
+    {
+        limit += 5;
+    }
+	return limit - my_fullness();
 }
 
 int availableDrunkenness()
 {
-    if (inebriety_limit() == 0) return 0; //certain edge cases
-	return inebriety_limit() - my_inebriety();
+    int limit = inebriety_limit();
+    if (my_path_id() == PATH_ACTUALLY_ED_THE_UNDYING && limit == 0 && $skill[Replacement Liver].have_skill())
+    {
+    	limit += 5;
+    }
+    if (limit == 0) return 0; //certain edge cases
+	return limit - my_inebriety();
 }
 
 int availableSpleen()
 {
-	return spleen_limit() - my_spleen_use();
+	int limit = spleen_limit();
+	if (my_path_id() == PATH_ACTUALLY_ED_THE_UNDYING && limit == 0)
+	{
+        limit += 5; //always true
+		//mafia resets the limits to zero in the underworld because it does, so anti-mafia:
+        foreach s in $skills[Extra Spleen,Another Extra Spleen,Yet Another Extra Spleen,Still Another Extra Spleen,Just One More Extra Spleen,Okay Seriously\, This is the Last Spleen]
+        {
+        	if (s.have_skill())
+         		limit += 5;
+        }
+	} 
+	return limit - my_spleen_use();
 }
 
 item [int] missingComponentsToMakeItemPrivateImplementation(item it, int it_amounted_needed, int recursion_limit_remaining)
@@ -4525,7 +4480,7 @@ boolean [string] __numeric_modifier_names = $strings[Familiar Weight,Monster Lev
 
 boolean [monster] __genie_invalid_monsters = $monsters[ninja snowman assassin,modern zmobie,big swarm of ghuol whelps,giant swarm of ghuol whelps,swarm of ghuol whelps,dirty old lihc,ghostly pickle factory worker,mouthless murmur,Mrs. Freeze,Slime Tube monster,Xiblaxian political prisoner,snakefire in the grass,Spant soldier,BRICKO cathedral,BRICKO airship,giant amorphous blob,amorphous blob,"Blofeld",Thanksgolem,time-spinner prank,boneless blobghost,Source Agent,One Thousand Source Agents,giant rubber spider,skulldozer,your butt,Clara,Jick's butt,Brick Mulligan\, the Bartender,Trophyfish,Drunk cowpoke,Wannabe gunslinger,Surly gambler,Cow cultist,Hired gun,Camp cook,Skeletal gunslinger,Restless ghost,Buzzard,Mountain lion,Grizzled bear,Diamondback rattler,Coal snake,Frontwinder,Caugr,Pyrobove,Spidercow,Moomy,Jeff the Fancy Skeleton,Daisy the Unclean,Pecos Dave,Pharaoh Amoon-Ra Cowtep,Snake-Eyes Glenn,Former Sheriff Dan Driscoll,Unusual construct,Granny Hackleton,Villainous Minion,Villainous Henchperson,Villainous Villain,LOV Enforcer,LOV Engineer,LOV Equivocator,Abcrusher 4000&trade;,All-Hallow's Steve,Apathetic lizardman,Aquaconda,Baron von Ratsworth,Beast with X Ears,Beast with X Eyes,Bee swarm,Bee thoven,Beebee gunners,Beebee King,Beebee queue,Beelephant,Best Game Ever,Biclops,Black pudding,Bonerdagon,Book of Faces,Booty crab,BRICKO elephant,BRICKO gargantuchicken,BRICKO octopus,BRICKO oyster,BRICKO python,BRICKO turtle,BRICKO vacuum cleaner,Broodling seal,Brutus\, the toga-clad lout,Bugbear Captain,Bugbear robo-surgeon,Buzzerker,C.A.R.N.I.V.O.R.E. Operative,Candied Yam Golem,Canned goblin conspirator,Carbuncle Top,Carnivorous dill plant,Caveman Dan,Centurion of Sparky,Chatty coworker,Chester,Chief Electronic Overseer,Chocolate hare,Chocolate-cherry prairie dog,Cosmetics wraith,Count Drunkula,Count Drunkula (Hard Mode),crazy bastard,Croqueteer,Cyrus the Virus,Danglin' Chad,Deadly Hydra,Demon of New Wave,Disorganized files,Dr. Awkward,Drownedbeat,Drunken rat king,E.V.E.\, the robot zombie,Ed the Undying,Elp&iacute;zo & Crosybdis,Endless conference call,Enormous blob of gray goo,Escalatormaster&trade;,Essence of Interspecies Respect,Essence of Soy,Essence of Tofu,Evil spaghetti cult assassin,Extremely annoyed witch,Falls-From-Sky,Falls-From-Sky (Hard Mode),Family of kobolds,Father McGruber,Father Nikolai Ravonovich,Fear Man,Fearsome giant squid,Fearsome Wacken,Felonia\, Queen of the Spooky Gravy Fairies,Ferocious roc,Filthworm drone,Filthworm royal guard,Fire truck,Fnord the Unspeakable,Frank &quot;Skipper&quot; Dan\, the Accordion Lord,Frosty,Frozen Solid Snake,Full-length mirror,Georgepaul\, the Balldodger,ghost of Elizabeth Spookyraven,Ghost of Fernswarthy's Grandfather,Ghostly pickle factory worker,Giant bird-creature,Giant jungle python,Giant man-eating shark,Giant sandworm,Giant tardigrade,Gingerbread lawyer,Glass of Orange Juice,Goblin conspirator,Gorgolok\, the Demonic Hellseal,Great Wolf of the Air,Great Wolf of the Air (Hard Mode),Groar,Guajolote Cad&aacute;ver,Guard turtle,Gummi plesiosaur,Gurgle,Guy Made Of Bees,Hammered Yam Golem,Hank North\, Photojournalist,Heat seal,Heimandatz\, Nacho Golem,Hermetic seal,The Hermit,Hideous slide show,Hodgman\, The Hoboverlord,Holographic army,Hot bugbear,Hot ghost,Hot skeleton,Hot vampire,Hot werewolf,Hot zombie,Huge ghuol,Hunting seal,Ice cream truck,Inebriated Tofurkey,Jocko Homo,Johnringo\, the Netdragger,Knob Goblin King,Knott Slanding,Largish blob of gray goo,Larry of the Field of Signs,Larval filthworm,Legal alien,Legstrong&trade; stationary bicycle,Little blob of gray goo,Lord Spookyraven,Lumpy\, the Demonic Sauceblob,Malevolent Tofurkey,Mayor Ghost,Mayor Ghost (Hard Mode),Mimic,Moister oyster,Moneybee,Monty Basingstoke-Pratt\, IV,Mumblebee,Naughty Sorceress,Neil,Next-generation Frat Boy,Novia Cad&aacute;ver,Novio Cad&aacute;ver,Ol' Scratch,Oscus,your overflowing inbox,Padre Cad&aacute;ver,panicking Knott Yeti,Peanut,Peregrino Cad&aacute;ver,Persona Inocente Cad&aacute;ver,Plastered Can of Cranberry Sauce,Monstrous Boiler,Possessed Can of Cranberry Sauce,Procedurally-generated skeleton,Professor Jacking,Protector Spectre,Queen Bee,Queen filthworm,Rack of free weights,Rock Pop weasel,Rotten dolphin thief,sentient ATM,Your Shadow,Skelter Butleton\, the Butler Skeleton,Skulldozer,Slow Talkin' Elliot,Smut orc pervert,Snapdragon,Somebody else's butt,Somerset Lopez\, Demon Mariachi,Soused Stuffing Golem,Space beast matriarch,Space beast,Spaghetti Demon,Spawn of Wally,Spider conspirator,Spider-goblin conspirator,Spider-legged witch's hut,Spirit alarm clock,Stella\, the Demonic Turtle Poacher,Storm cow,Stuffing Golem,Tedious spreadsheet,The Big Wisniewski,Crimbomega,The Krampus,The Landscaper,The Man,The Nuge,The Server,The Sierpinski brothers,The Temporal Bandit,The Unkillable Skeleton,The Unkillable Skeleton (Hard Mode),Tiger-lily,Time-spinner prank,Tin can conspirator,Tin spider conspirator,Tomb rat king,Tome of Tropes,Totally Malicious 'Zine,Treadmill,Tio Cad&aacute;ver,Unearthed monstrosity,Unoptimized database,Vanya's Creature,Victor the Insult Comic Hellhound,Vine gar,War Frat Streaker,Wasp in a wig,Water cooler,White Bone Demon,Wu Tang the Betrayer,Wumpus,X Bottles of Beer on a Golem,X Stone Golem,X-dimensional horror,X-headed Hydra,Xiblaxian political prisoner,Your Brain,Zim Merman,Zombie Homeowners' Association,Zombie Homeowners' Association (Hard Mode),Zombo,7-Foot Dwarf (Moiling),7-Foot Dwarf (Royale),<s>Killer</s> Festive Arc-Welding Elfbot,<s>Killer</s> Festive Decal-Applying Elfbot,<s>Killer</s> Festive Laser-Calibrating Elfbot,<s>Killer</s> Festive Weapons-Assembly Elfbot,Underworld Tree,Accountant-Barbarian,Acoustic electric eel,Alien,Alien queen,alien UFO,Aquabat,Aquagoblin,Auqadargon,Big Wisnaqua,Boss Bat,Boss Bat?,Dad Sea Monkee,Donerbagon,Dr. Aquard,Ed the Undying (1),Ed the Undying (2),Ed the Undying (3),Ed the Undying (4),Ed the Undying (5),Ed the Undying (6),Ed the Undying (7),gingerbread vigilante,Gorgolok\, the Infernal Seal (Inner Sanctum),Gorgolok\, the Infernal Seal (The Nemesis' Lair),Gorgolok\, the Infernal Seal (Volcanic Cave),hulking bridge troll,Lord Soggyraven,Lumpy\, the Sinister Sauceblob (Inner Sanctum),Lumpy\, the Sinister Sauceblob (The Nemesis' Lair),Lumpy\, the Sinister Sauceblob (Volcanic Cave),Mammon the Elephant,Naughty Sorceress (2),Naughty Sorceress (3),new Knob Goblin King,Protector Spurt,Shub-Jigguwatt\, Elder God of Violence,Somerset Lopez\, Dread Mariachi (Inner Sanctum),Somerset Lopez\, Dread Mariachi (The Nemesis' Lair),Somerset Lopez\, Dread Mariachi (Volcanic Cave),Spaghetti Elemental (Inner Sanctum),Spaghetti Elemental (The Nemesis' Lair),Spaghetti Elemental (Volcanic Cave),Spirit of New Wave (Inner Sanctum),Spirit of New Wave (The Nemesis' Lair),Spirit of New Wave (Volcanic Cave),Stella\, the Turtle Poacher (Inner Sanctum),Stella\, the Turtle Poacher (The Nemesis' Lair),Stella\, the Turtle Poacher (Volcanic Cave),The Aquaman,The Avatar of Sneaky Pete,The Bat in the Spats,The Clownlord Beelzebozo,The Large-Bellied Snitch,The Rain King,The Silent Nightmare,The Terrible Pinch,The Thing with No Name,The Thorax,Thug 1 and Thug 2,Yog-Urt\, Elder Goddess of Hatred,You the Adventurer,Your winged yeti,The Abominable Fudgeman,The Author,Kudzu,Mansquito,Miss Graves,The Plumber,The Mad Libber,Doc Clock,Mr. Burns,The Inquisitor,ancient protector spirit (The Hidden Apartment Building),ancient protector spirit (The Hidden Bowling Alley),ancient protector spirit (The Hidden Hospital),ancient protector spirit (The Hidden Office Building),Argarggagarg the Dire Hellseal,Ringogeorge\, the Bladeswitcher,Ron "The Weasel" Copperhead,Scott the Miner,Seannery the Conman,The Avatar of Boris,The Avatar of Jarlsberg,The Barrelmech of Diogenes,The Beefhemoth,The Colollilossus,The Cray-Kin,the Crimborg,the darkness (blind),The Emperor,the former owner of the Skeleton Store,The Frattlesnake,The Free Man,The Fudge Wizard,The ghost of Ebenoozer Screege,The ghost of Jim Unfortunato,The ghost of Lord Montague Spookyraven,the ghost of Monsieur Baguelle,the ghost of Oily McBindle,the ghost of Phil Bunion,The ghost of Richard Cockingham,The ghost of Sam McGee,The ghost of Vanillica "Trashblossom" Gorton,The ghost of Waldo the Carpathian,the gunk,The Headless Horseman,The Icewoman,The Jokester,The Lavalier,The Luter,The Mariachi With No Name,The Master of Thieves,The Mastermind,the most embarrassing moment in your entire life,the realization that everyone you love will die someday,The Sagittarian,The Snake With Like Ten Heads,The Unknown Accordion Thief,The Unknown Disco Bandit,The Unknown Pastamancer,The Unknown Sauceror,The Unknown Seal Clubber,The Unknown Turtle Tamer,The Whole Kingdom,Yakisoba the Executioner,the abstract concept of poverty,ancient protector spirit, ancient protector spirit (obsolete),Angry Space Marine,Norville Rogers,Norville Rogers,Peacannon,Herman East\, Relivinator,Angry Space Marine,Deputy Nick Soames & Earl,Charity the Zombie Hunter,Special Agent Wallace Burke Corrigan,Rag-tag band of survivors,Wesley J. "Wes" Campbell,Zombie-huntin' feller,Burning Snake of Fire,CDMoyer's butt,HotStuff's butt,Mr Skullhead's butt,Multi Czar's butt,Don Crimbo,intelligent alien,Kleptobrainiac,LOLmec,mayonnaise wasp,Cheetahman,Microwave Magus,Kung-Fu Hustler,Tasmanian Dervish,Macho Man,Iron Chef,Entire Shoplifter,Mr. Loathing,Metaphysical Gastronomist,Kleptobrainiac,Savage Beatnik,Creamweaver,Smooth Criminal,Fire Fighter,Cereal Arsonist,Burnglar,Grease Trapper,Ham Shaman,Porkpocket,Leonard,Ghostpuncher,Plague Chef,Batburglar,Arthur Frankenstein,Snowbrawler,Ice Cream Conjurer,Iceberglar,Granola Barbarian,Cheese Wizard,Assassin,Odorous Humongous,queen bee (Spelunky),small hostile animal,hostile plant,hostile intelligent alien,hostile plant,large hostile plant,exotic hostile plant,small hostile animal,large hostile animal,exotic hostile animal,Spant drone,Murderbot drone,Murderbot soldier,hostile intelligent alien,bat,cobra,snake,spider,bee,scorpion,skeleton,tikiman,caveman,yeti,crocodile man,cultist,magma man,mummy,devil,vampire,cobra,snake,spider,spider queen,skeleton,vampire,bee,mummy,Bananubis,Yomama,common criminal,uncommon criminal,rare criminal,low-level mook,vicious plant creature,vine-controlled botanist,low-level mook,giant leech,giant mosquito,low-level mook,lovestruck goth dude,walking skeleton,mid-level mook,liquid plumber,plumber's helper,mid-level mook,former inmate,former guard,mid-level mook,very [adjective] henchwoman,very [adjective] henchman,high-level mook,time bandit,clockwork man,high-level mook,serial arsonist,burner,high-level mook,inquisitee,trivia researcher,screambat,Mother Slime,anesthesiologist bugbear,cheerless mime scientist,cheerless mime soldier,Elf Hobo,outlaw leader,Richard X,Uncle Hobo,wall of bones,wall of meat,wall of skin,Principal Mooney,shopkeeper,topiary golem,silent scream,Your Lack of Reflection,Clancy,Jerry Bradford,evil spaghetti cult priest,evil spaghetti cultist,evil trumpet-playing mariachi,evil vihuela-playing mariachi,haunted soup tureen,infernal seal larva,infernal seal spawn,pernicious puddle of pesto,psychedelic fur,slithering hollandaise glob,talking head,vengeful turtle spectre,b&eacute;arnaise zombie];
 
-boolean [effect] __genie_invalid_effects = $effects[jukebox hero,Juicy Boost,Meteor Showered,Steely-eyed squint,Blue Eyed Devil,Cereal Killer,Nearly All-Natural,Amazing,Throwing some shade,A rose by any other material,Gaze of the Gazelle,East of Eaten,Robot Friends,Smart Drunk,Margamergency,Pajama Party,Rumpel-Pumped,Song of Battle,Song of Solitude,Buy!\  Sell!\  Buy!\  Sell!,eldritch attunement,The Inquisitor's unknown effect,Filthworm Drone Stench,Filthworm Guard Stench,Filthworm Larva Stench,Green Peace,Red Menace,Video... Games?,things man was not meant to eat,Whitesloshed,thrice-cursed,bendin' hell,Synthesis: Hot,Synthesis: Cold,Synthesis: Pungent,Synthesis: Scary,Synthesis: Greasy,Synthesis: Strong,Synthesis: Smart,Synthesis: Cool,Synthesis: Hardy,Synthesis: Energy,Synthesis: Greed,Synthesis: Collection,Synthesis: Movement,Synthesis: Learning,Synthesis: Style,The Good Salmonella,Giant Growth,Lovebotamy,Open Heart Surgery,Wandering Eye Surgery,gar-ish,Puissant Pressure,Perspicacious Pressure,Pulchritudinous Pressure,It's Good To Be Royal!,The Fire Inside,Puzzle Champ,The Royal We,Hotform,Coldform,Sleazeform,Spookyform,Stenchform,A Hole in the World,Bored With Explosions,thanksgetting,Barrel of Laughs,Beer Barrel Polka,Superdrifting,Covetin' Drunk,All Wound Up,Driving Observantly,Driving Waterproofly,Bow-Legged Swagger,First Blood Kiwi,You've Got a Stew Going!,Shepherd's Breath,Of Course It Looks Great,Doing The Hustle,Fortune of the Wheel,Shelter of Shed,Hot Sweat,Cold Sweat,Rank Sweat,Black Sweat,Flop Sweat,Mark of Candy Cain,Black Day,What Are The Odds!?,Dancin' Drunk, School Spirited,Muffled,Sour Grapes,Song of Fortune,Pork Barrel,Ashen,Brooding,Purple Tongue,Green Tongue,Orange Tongue,Red Tongue,Blue Tongue,Black Tongue,Cupcake of Choice,The Cupcake of Wrath,Shiny Happy Cupcake,Your Cupcake Senses Are Tingling,Tiny Bubbles in the Cupcake,Broken Heart,Fiery Heart,Cold Hearted,Sweet Heart,Withered Heart,Lustful Heart,Pasta Eyeball,Cowlick,It's Ridiculous,Dangerous Zone Song,Tiffany's Breakfast,Flashy Dance Song,Pet Shop Song,Dark Orchestral Song,Bounty of Renenutet,Octolus Gift,Magnetized Ears,Lucky Struck,Drunk and Avuncular,Ministrations in the Dark,Record Hunger,SuperStar,Everything Looks Blue,Everything Looks Red,Everything Looks Yellow,Snow Fortified,Bubble Vision,High-Falutin',Song of Accompaniment,Song of Cockiness,Song of the Glorious Lunch,Song of the Southern Turtle,Song of Sauce,Song of Bravado,Song of Slowness,Song of Starch,Song of the North,It's a Good Life!,I'll Have the Soup,Why So Serious?,&quot;The Disease&quot;,Unmuffled,Overconfident,Shrieking Weasel,Biker Swagger,Punchable Face,ChibiChanged&trade;,Avatar of She-Who-Was,Behind the Green Curtain,Industrially Frosted,Mer-kinkiness,Hotcaked,[1553]Slicked-Back Do,Eggscitingly Colorful,Party on Your Skin,Blessing of the Spaghetto,Force of Mayo Be With You,Ear Winds,Desenfantasmada,Skull Full of Hot Chocolate,Hide of Sobek,Wassailing You,Barrel Chested,Mimeoflage,Tainted Love Potion,Avatar of the Storm Tortoise,Fortunate\, Son,Avatar of the War Snapper,Faerie Fortune,Heroic Fortune,Fantasy Faerie Blessing,Brewed Up,Poison For Blood,Fantastical Health,Spirit of Galactic Unity,Inner Elf,The Best Hair You've Ever Had,Hardened Sweatshirt,Yeast-Hungry,More Mansquito Than Man,Spiced Up,Warlock\, Warstock\, and Warbarrel,Tomes of Opportunity,Temporary Blindness,Rolando's Rondo of Resisto,Shielded Unit,Mist Form]; //'
+boolean [effect] __genie_invalid_effects = $effects[jukebox hero,Juicy Boost,Meteor Showered,Steely-eyed squint,Blue Eyed Devil,Cereal Killer,Nearly All-Natural,Amazing,Throwing some shade,A rose by any other material,Gaze of the Gazelle,East of Eaten,Robot Friends,Smart Drunk,Margamergency,Pajama Party,Rumpel-Pumped,Song of Battle,Song of Solitude,Buy!\  Sell!\  Buy!\  Sell!,eldritch attunement,The Inquisitor's unknown effect,Filthworm Drone Stench,Filthworm Guard Stench,Filthworm Larva Stench,Green Peace,Red Menace,Video... Games?,things man was not meant to eat,Whitesloshed,thrice-cursed,bendin' hell,Synthesis: Hot,Synthesis: Cold,Synthesis: Pungent,Synthesis: Scary,Synthesis: Greasy,Synthesis: Strong,Synthesis: Smart,Synthesis: Cool,Synthesis: Hardy,Synthesis: Energy,Synthesis: Greed,Synthesis: Collection,Synthesis: Movement,Synthesis: Learning,Synthesis: Style,The Good Salmonella,Giant Growth,Lovebotamy,Open Heart Surgery,Wandering Eye Surgery,gar-ish,Puissant Pressure,Perspicacious Pressure,Pulchritudinous Pressure,It's Good To Be Royal!,The Fire Inside,Puzzle Champ,The Royal We,Hotform,Coldform,Sleazeform,Spookyform,Stenchform,A Hole in the World,Bored With Explosions,thanksgetting,Barrel of Laughs,Beer Barrel Polka,Superdrifting,Covetin' Drunk,All Wound Up,Driving Observantly,Driving Waterproofly,Bow-Legged Swagger,First Blood Kiwi,You've Got a Stew Going!,Shepherd's Breath,Of Course It Looks Great,Doing The Hustle,Fortune of the Wheel,Shelter of Shed,Hot Sweat,Cold Sweat,Rank Sweat,Black Sweat,Flop Sweat,Mark of Candy Cain,Black Day,What Are The Odds!?,Dancin' Drunk, School Spirited,Muffled,Sour Grapes,Song of Fortune,Pork Barrel,Ashen,Brooding,Purple Tongue,Green Tongue,Orange Tongue,Red Tongue,Blue Tongue,Black Tongue,Cupcake of Choice,The Cupcake of Wrath,Shiny Happy Cupcake,Your Cupcake Senses Are Tingling,Tiny Bubbles in the Cupcake,Broken Heart,Fiery Heart,Cold Hearted,Sweet Heart,Withered Heart,Lustful Heart,Pasta Eyeball,Cowlick,It's Ridiculous,Dangerous Zone Song,Tiffany's Breakfast,Flashy Dance Song,Pet Shop Song,Dark Orchestral Song,Bounty of Renenutet,Octolus Gift,Magnetized Ears,Lucky Struck,Drunk and Avuncular,Ministrations in the Dark,Record Hunger,SuperStar,Everything Looks Blue,Everything Looks Red,Everything Looks Yellow,Snow Fortified,Bubble Vision,High-Falutin',Song of Accompaniment,Song of Cockiness,Song of the Glorious Lunch,Song of the Southern Turtle,Song of Sauce,Song of Bravado,Song of Slowness,Song of Starch,Song of the North,It's a Good Life!,I'll Have the Soup,Why So Serious?,&quot;The Disease&quot;,Unmuffled,Overconfident,Shrieking Weasel,Biker Swagger,Punchable Face,ChibiChanged&trade;,Avatar of She-Who-Was,Behind the Green Curtain,Industrially Frosted,Mer-kinkiness,Hotcaked,[1553]Slicked-Back Do,Eggscitingly Colorful,Party on Your Skin,Blessing of the Spaghetto,Force of Mayo Be With You,Ear Winds,Desenfantasmada,Skull Full of Hot Chocolate,Hide of Sobek,Wassailing You,Barrel Chested,Mimeoflage,Tainted Love Potion,Avatar of the Storm Tortoise,Fortunate\, Son,Avatar of the War Snapper,Faerie Fortune,Heroic Fortune,Fantasy Faerie Blessing,Brewed Up,Poison For Blood,Fantastical Health,Spirit of Galactic Unity,Inner Elf,The Best Hair You've Ever Had,Hardened Sweatshirt,Yeast-Hungry,More Mansquito Than Man,Spiced Up,Warlock\, Warstock\, and Warbarrel,Tomes of Opportunity,Temporary Blindness,Rolando's Rondo of Resisto,Shielded Unit,Mist Form,Cinco Elementos]; //'
 //Works: Driving Wastefully, Driving Stealthily, rest untested
 
 boolean [string] __genie_invalid_monster_strings = $strings[Jerry Bradford\, Pokéfam World Champion];
