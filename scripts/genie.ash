@@ -1230,6 +1230,15 @@ int [int] listCopy(int [int] l)
     return result;
 }
 
+item [int] listCopy(item [int] l)
+{
+    item [int] result;
+    foreach key in l
+        result[key] = l[key];
+    return result;
+}
+
+
 monster [int] listCopy(monster [int] l)
 {
     monster [int] result;
@@ -1773,6 +1782,12 @@ string [int] split_string_alternate(string source, string delimiter)
         return listMakeBlankString();
     return split_string_mutable(source, delimiter);
 }
+string [int] split_string_alternate_immutable(string source, string delimiter)
+{
+    if (source.length() == 0)
+        return listMakeBlankString();
+    return split_string(source, delimiter);
+}
 
 string slot_to_string(slot s)
 {
@@ -1966,7 +1981,7 @@ item get_property_item(string property)
 }
 
 
-string __genie_version = "2.2.17";
+string __genie_version = "2.2.18";
 
 string removeFirstWord(string line)
 {
@@ -1979,6 +1994,12 @@ void main(string arguments)
 {
 	arguments = arguments.to_lower_case();
 	print_html("Genie version " + __genie_version);
+	
+	if ($item[genie bottle].item_amount() == 0 && $item[genie bottle].storage_amount() > 0 && can_interact())
+	{
+		retrieve_item(1, $item[genie bottle]);
+	}
+	
 	
 	if ($item[genie bottle].item_amount() == 0 && $item[pocket wish].item_amount() == 0)
 	{

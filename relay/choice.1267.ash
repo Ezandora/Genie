@@ -1,7 +1,7 @@
 import "relay/choice.ash";
 
 
-string __genie_version = "2.2.17";
+string __genie_version = "2.2.18";
 
 //Allows error checking. The intention behind this design is Errors are passed in to a method. The method then sets the error if anything went wrong.
 record Error
@@ -1234,6 +1234,15 @@ int [int] listCopy(int [int] l)
     return result;
 }
 
+item [int] listCopy(item [int] l)
+{
+    item [int] result;
+    foreach key in l
+        result[key] = l[key];
+    return result;
+}
+
+
 monster [int] listCopy(monster [int] l)
 {
     monster [int] result;
@@ -1779,6 +1788,12 @@ string [int] split_string_alternate(string source, string delimiter)
         return listMakeBlankString();
     return split_string_mutable(source, delimiter);
 }
+string [int] split_string_alternate_immutable(string source, string delimiter)
+{
+    if (source.length() == 0)
+        return listMakeBlankString();
+    return split_string(source, delimiter);
+}
 
 string slot_to_string(slot s)
 {
@@ -1981,252 +1996,51 @@ This implementation is not 1:1 compatible, as it doesn't take into account your 
 //int [item] get_ingredients_fast(item it)
 
 
-static
+Record Recipe
 {
-    int [item][item] __item_ingredients;
-    boolean [item] __item_is_purchasable_from_a_store;
-}
-
-
-
-boolean parseDatafileItem(int [item] out, string item_name)
-{
-    if (item_name == "") return false;
-    
-    item it = item_name.to_item();
-    if (it != $item[none])
-    {
-        out[it] += 1;
-    }
-    else if (item_name.contains_text("("))
-    {
-        //Do complicated parsing.
-        //NOTE: "CRIMBCO Employee Handbook (chapter 1)" and "snow berries (7)" are both valid entries that mean different things.
-        string [int][int] matches = item_name.group_string("(.*?) \\(([0-9]*)\\)");
-        if (matches[0].count() == 3)
-        {
-            it = matches[0][1].to_item();
-            int amount = matches[0][2].to_int();
-            if (it != $item[none] && amount > 0)
-            {
-                out[it] += amount;
-            }
-        }
-    }
-    return true;
-}
-
-
-Record ConcoctionMapEntry
-{
-    //Only way I know how to parse this file with file_to_map. string [int] won't work, string [string] won't...
-    string craft_type;
-    string mixing_item_1;
-    string mixing_item_2;
-    string mixing_item_3;
-    string mixing_item_4;
-    string mixing_item_5;
-    string mixing_item_6;
-    string mixing_item_7;
-    string mixing_item_8;
-    string mixing_item_9;
-    string mixing_item_10;
-    string mixing_item_11;
-    string mixing_item_12;
-    string mixing_item_13;
-    string mixing_item_14;
-    string mixing_item_15;
-    string mixing_item_16;
-    string mixing_item_17;
-    string mixing_item_18;
+	item creating_item;
+	string type;
+	int [item] source_items;
+	
+	Coinmaster source_coinmaster;
+	
+	string coinmaster_row_id;
 };
 
-void parseConcoction(int [item] ingredients, ConcoctionMapEntry c)
+static
 {
-    //If this ever shows up somewhere, please understand, it's not my fault file_to_map works this way.
-    if (!parseDatafileItem(ingredients, c.mixing_item_1))
-        return;
-    if (!parseDatafileItem(ingredients, c.mixing_item_2))
-        return;
-    if (!parseDatafileItem(ingredients, c.mixing_item_3))
-        return;
-    if (!parseDatafileItem(ingredients, c.mixing_item_4))
-        return;
-    if (!parseDatafileItem(ingredients, c.mixing_item_5))
-        return;
-    if (!parseDatafileItem(ingredients, c.mixing_item_6))
-        return;
-    if (!parseDatafileItem(ingredients, c.mixing_item_7))
-        return;
-    if (!parseDatafileItem(ingredients, c.mixing_item_8))
-        return;
-    if (!parseDatafileItem(ingredients, c.mixing_item_9))
-        return;
-    if (!parseDatafileItem(ingredients, c.mixing_item_10))
-        return;
-    if (!parseDatafileItem(ingredients, c.mixing_item_11))
-        return;
-    if (!parseDatafileItem(ingredients, c.mixing_item_12))
-        return;
-    if (!parseDatafileItem(ingredients, c.mixing_item_13))
-        return;
-    if (!parseDatafileItem(ingredients, c.mixing_item_14))
-        return;
-    if (!parseDatafileItem(ingredients, c.mixing_item_15))
-        return;
-    if (!parseDatafileItem(ingredients, c.mixing_item_16))
-        return;
-    if (!parseDatafileItem(ingredients, c.mixing_item_17))
-        return;
-    if (!parseDatafileItem(ingredients, c.mixing_item_18))
-        return;
+	Recipe [item][int] __item_recipes;
+	
+    boolean [item] __item_is_purchasable_from_a_store;
+    boolean [item] __items_that_craft_food;
 }
 
-void initialiseItemIngredients()
+Recipe [int] recipes_for_item(item it)
 {
-    if (__item_ingredients.count() > 0) return;
-    
-    //Parse concoctions:
-    //Highest observed so far: 17.
-    if (true)
-    {
-        string [string, string, string, string, string, string, string, string, string, string, string, string, string, string, string, string, string, string, string] concoctions_map_2;
-        file_to_map("data/concoctions.txt", concoctions_map_2);
-        foreach crafting_thing, crafting_type, mixing_item_1, mixing_item_2, mixing_item_3, mixing_item_4, mixing_item_5, mixing_item_6, mixing_item_7, mixing_item_8, mixing_item_9, mixing_item_10, mixing_item_11, mixing_item_12, mixing_item_13, mixing_item_14, mixing_item_15, mixing_item_16, mixing_item_17, mixing_item_18 in concoctions_map_2
-        {
-            if (crafting_type == "SUSHI" || crafting_type == "VYKEA") continue; //not really items
-            if (crafting_type == "CLIPART") continue; //bucket of wine is not made of three turtle totems
-            item it = crafting_thing.to_item();
-            if (it == $item[none])
-            {
-                int [item] item_results;
-                parseDatafileItem(item_results, crafting_thing);
-                if (item_results.count() == 0)
-                {
-                    //print_html("Unknown crafting_thing " + crafting_thing);
-                    continue;
-                }
-                foreach it2 in item_results
-                    it = it2;
-            }
-            if (crafting_type.contains_text("ROW"))
-                __item_is_purchasable_from_a_store[it] = true;
-            if (__item_ingredients contains it) continue; //mafia uses first defined entry
-            
-            int [item] ingredients;
-            //Create map entry:
-            ConcoctionMapEntry c;
-            c.craft_type = crafting_type;
-            c.mixing_item_1 = mixing_item_1;
-            c.mixing_item_2 = mixing_item_2;
-            c.mixing_item_3 = mixing_item_3;
-            c.mixing_item_4 = mixing_item_4;
-            c.mixing_item_5 = mixing_item_5;
-            c.mixing_item_6 = mixing_item_6;
-            c.mixing_item_7 = mixing_item_7;
-            c.mixing_item_8 = mixing_item_8;
-            c.mixing_item_9 = mixing_item_9;
-            c.mixing_item_10 = mixing_item_10;
-            c.mixing_item_11 = mixing_item_11;
-            c.mixing_item_12 = mixing_item_12;
-            c.mixing_item_13 = mixing_item_13;
-            c.mixing_item_14 = mixing_item_14;
-            c.mixing_item_15 = mixing_item_15;
-            c.mixing_item_16 = mixing_item_16;
-            c.mixing_item_17 = mixing_item_17;
-            c.mixing_item_18 = mixing_item_18;
-            
-            parseConcoction(ingredients, c);
-            
-            if (ingredients.count() > 0)
-                __item_ingredients[it] = ingredients;
-        }
-    }
-    else
-    {
-        //Not compatible.
-        //Concoction manager seems to read the first entry, not the second. file_to_map reads the second. Example: spooky wad.
-        //Or maybe it's just random which the concoction manager uses? Example: bloody beer vs. spooky wad. Or it picks the one we can make...?
-        ConcoctionMapEntry [string] concoctions_map;
-        file_to_map("data/concoctions.txt", concoctions_map);
-        foreach crafting_thing in concoctions_map
-        {
-            ConcoctionMapEntry c = concoctions_map[crafting_thing];
-            item it = crafting_thing.to_item();
-            if (it == $item[none])
-                continue;
-            
-            int [item] ingredients;
-            
-            parseConcoction(ingredients, c);
-            
-            if (__item_ingredients contains it) continue; //mafia uses first defined entry
-            if (ingredients.count() > 0)
-                __item_ingredients[it] = ingredients;
-        }
-    }
-    //Parse coinmasters:
-    
-    /*Record CoinmastersMapEntry
-    {
-        string buy_or_sell_type;
-        int amount;
-        item it;
-        string row_id;
-    };
-    CoinmastersMapEntry [string] coinmasters_map;*/
-    string [string,string,int,string] coinmasters_map;
-    file_to_map("data/coinmasters.txt", coinmasters_map);
-    //print_html("coinmasters_map = " + coinmasters_map.to_json());
-    foreach master_name, type, amount, item_string in coinmasters_map
-    {
-        //FIXME track if coinmaster is accessible?
-        //print_html(master_name + ", " + type + ", " + amount + ", " + item_string);
-        if (type != "buy") continue;
-        coinmaster c = master_name.to_coinmaster();
-        if (c == $coinmaster[none])
-        {
-            //Hmm....
-            //print_html(master_name + " is not a coinmaster");
-            continue;
-        }
-        if (c.item == $item[none]) //bat-fabricator
-            continue;
-        item it = item_string.to_item();
-        if (it == $item[none])
-        {
-            //peppermint tailings (10) at the moment
-            //FIXME write this
-            continue;
-        }
-        
-        if (it == $item[none])
-            continue;
-        
-        __item_is_purchasable_from_a_store[it] = true;
-        if (__item_ingredients contains it) continue;
-        
-        int [item] ingredients;
-        ingredients[c.item] = amount;
-        __item_ingredients[it] = ingredients;
-    }
-    
+	return __item_recipes[it];
 }
 
+Recipe recipe_for_item(item it)
+{
+	if (__item_recipes[it].count() == 0)
+	{
+		Recipe blank;
+        return blank;
+	}
+	return __item_recipes[it][0];
+}
 
 int [item] get_ingredients_fast(item it)
 {
-    //return it.get_ingredients();
-    if (__item_ingredients.count() == 0)
-        initialiseItemIngredients();
-    if (!(__item_ingredients contains it))
-    {
-        //This is six milliseconds per call, but only if the item has an ingredient(?), so be wary:
-        int [item] ground_truth = it.get_ingredients();
-        if (ground_truth.count() > 0) //We could cache it if it's empty, except sometimes that changes.
-            __item_ingredients[it] = ground_truth;
-    }
-    return __item_ingredients[it];
+	Recipe [int] recipes = __item_recipes[it];
+	if (recipes.count() == 0)
+	{
+		//use get_ingredient?
+        //mafia appears to have various items that return get_ingredients but do not show up in the datafiles
+        int [item] mafia_response = it.get_ingredients();
+        return mafia_response;
+	}
+	return recipes[0].source_items;
 }
 
 boolean item_is_purchasable_from_a_store(item it)
@@ -2240,10 +2054,194 @@ boolean item_cannot_be_asdon_martined_because_it_was_purchased_from_a_store(item
 	return it.item_is_purchasable_from_a_store();
 }
 
+
+
+//Initialisation code, ignore:
+boolean parseDatafileItem(int [item] out, string item_name)
+{
+    if (item_name == "") return false;
+    
+    item it = item_name.to_item();
+    if (it != $item[none])
+    {
+        out[it] += 1;
+    }
+    else if (item_name.contains_text("("))
+    {
+        //Do complicated parsing.
+        //NOTE: "CRIMBCO Employee Handbook (chapter 1)" and "snow berries (7)" are both valid entries that mean different things.
+        //optional space between the item name and parenthesis because the CRIMBO12 items (BittyCar MeatCar) have no space there
+        string [int][int] matches = item_name.group_string("(.*?)[ ]*\\(([0-9]*)\\)");
+        if (matches[0].count() == 3)
+        {
+            it = matches[0][1].to_item();
+            if (it == $item[none]) return false;
+            int amount = matches[0][2].to_int();
+            if (amount > 0)
+            {
+                out[it] += amount;
+            }
+            else
+            	return false;
+        }
+    }
+    return true;
+}
+
+
+void InternalAddRecipe(Recipe r)
+{
+	if (!(__item_recipes contains r.creating_item))
+	{
+		Recipe [int] blank;
+        __item_recipes[r.creating_item] = blank;
+	}
+	__item_recipes[r.creating_item][__item_recipes[r.creating_item].count()] = r;
+	if (r.type == "COOK" || r.type == "COOK_FANCY")
+    {
+    	foreach it in r.source_items
+        	__items_that_craft_food[it] = true;
+    }
+}
+
+void InternalParseConcoctionEntry(string entry)
+{
+	string [int] split_entry = entry.split_string_alternate_immutable("\t");
+	//crafting_thing, crafting_type, mixing_item_1, mixing_item_2, mixing_item_3, mixing_item_4, mixing_item_5, mixing_item_6, mixing_item_7, mixing_item_8, mixing_item_9, mixing_item_10, mixing_item_11, mixing_item_12, mixing_item_13, mixing_item_14, mixing_item_15, mixing_item_16, mixing_item_17, mixing_item_18
+	if (split_entry.count() < 3) return;
+	Recipe r;
+	
+	r.creating_item = split_entry[0].to_item();
+	r.type = split_entry[1];
+	if (r.creating_item == $item[none])
+	{
+		//print_html("Unknown item " + split_entry[0]);
+        return;
+	}
+	for i from 2 to split_entry.count() - 1
+	{
+		string value = split_entry[i];
+		int [item] out;
+        parseDatafileItem(out, value);
+        if (out.count() > 0)
+        {
+        	foreach it, amount in out
+            {
+            	r.source_items[it] += amount;
+            }
+        }
+	}
+    if (r.type.contains_text("ROW"))
+        __item_is_purchasable_from_a_store[r.creating_item] = true;
+	
+	if (r.source_items.count() == 0)
+	{
+		//print_html(r.creating_item + " has no source items, entry is \"" + entry + "\"");
+        return;
+	}
+	InternalAddRecipe(r);
+	
+	
+	//print_html("Added " + r.creating_item + " of type " + r.type + " which requires " + r.source_items.to_json());
+}
+
+void InternalParseConcoctions()
+{
+	string [int] file_lines = file_to_array("data/concoctions.txt");
+	foreach key, entry in file_lines
+	{
+		//Note that FileUtilities.java appears to only ignore lines starting exactly with #.
+        //So that is what we will do.
+        if (entry == "") continue;
+        if (entry.char_at(0) == "#") continue;
+        InternalParseConcoctionEntry(entry);
+	}
+	
+	if (false)
+	{
+		foreach it in __item_recipes
+        {
+        	if (__item_recipes[it].count() <= 1) continue;
+            print_html(it + " has " + __item_recipes[it].count() + " recipes: " + __item_recipes[it].to_json()); 
+        }
+	}
+}
+
+void InternalParseCoinmasterEntry(string entry)
+{
+	//shop name, buy or sell, currency amount, item acquired, row
+	
+	string [int] split_entry = entry.split_string_alternate_immutable("\t");
+	if (split_entry.count() < 4) return;
+	if (split_entry[1] != "buy") return;
+	
+	Recipe r;
+	r.source_coinmaster = split_entry[0].to_coinmaster();
+	if (r.source_coinmaster == $coinmaster[none])
+	{
+		//print_html("Unknown coinmaster for " + entry);
+        return;
+	}
+	r.creating_item = split_entry[3].to_item();
+	if (r.creating_item == $item[none])
+	{
+		//print_html("Unknown item for " + entry);
+        return;
+	}
+	
+	int currency_amount = split_entry[2].to_int();
+	item store_item = r.source_coinmaster.item;
+	
+	if (store_item != $item[none])
+		r.source_items[store_item] = currency_amount;
+	
+	__item_is_purchasable_from_a_store[r.creating_item] = true;
+	
+	if (split_entry.count() >= 5)
+		r.coinmaster_row_id = split_entry[4];
+	if (r.source_items.count() == 0)
+	{
+		//print_html(r.creating_item + " has no source items, entry is \"" + entry + "\"");
+        return;
+	}
+	InternalAddRecipe(r);
+	//print_html(r.creating_item + ": " + r.to_json());
+}
+
+void InternalParseCoinmasters()
+{
+	//coinmasters.txt has improper format for actual game; it assumes a "store" currency which is not accurate, stores can have multiple currencies
+	
+	string [int] file_lines = file_to_array("data/coinmasters.txt");
+	foreach key, entry in file_lines
+	{
+        if (entry == "") continue;
+        if (entry.char_at(0) == "#") continue;
+        InternalParseCoinmasterEntry(entry);
+	}
+}
+
+
+void initialiseItemIngredients()
+{
+    if (__item_recipes.count() > 0) return;
+    
+    //Parse concoctions:
+    InternalParseConcoctions();
+    
+    //Parse coinmasters:
+    InternalParseCoinmasters();
+    
+}
+initialiseItemIngredients();
+
+
+
+
+
 void testItemIngredients()
 {
-    initialiseItemIngredients();
-    print_html(__item_ingredients.count() + " ingredients known.");
+    print_html(__item_recipes.count() + " recipes known.");
     foreach it in $items[]
     {
         int [item] ground_truth_ingredients = it.get_ingredients();
@@ -2335,6 +2333,7 @@ static
     int PATH_MARIO = 38;
     int PATH_LOW_KEY_SUMMER = 39;
     int PATH_LOKI = 39;
+    int PATH_GREY_GOO = 40;
 }
 
 float numeric_modifier_replacement(item it, string modifier)
@@ -2415,7 +2414,6 @@ static
 
 static
 {
-    boolean [item] __items_that_craft_food;
     boolean [item] __minus_combat_equipment;
     boolean [item] __equipment;
     boolean [item] __items_in_outfits;
@@ -2425,14 +2423,15 @@ static
         foreach it in $items[]
         {
             //Crafting:
-            string craft_type = it.craft_type();
+            //moved to ingredients.ash:
+            /*string craft_type = it.craft_type();
             if (craft_type.contains_text("Cooking"))
             {
                 foreach ingredient in it.get_ingredients_fast()
                 {
                     __items_that_craft_food[ingredient] = true;
                 }
-            }
+            }*/
             
             //Equipment:
             if ($slots[hat,weapon,off-hand,back,shirt,pants,acc1,acc2,acc3,familiar] contains it.to_slot())
@@ -3656,14 +3655,7 @@ int XiblaxianHoloWristPuterTurnsUntilNextItem()
     int progress = get_property_int("_holoWristProgress");
     
     //_holoWristProgress resets when drop happens
-    if (!mafiaIsPastRevision(15148))
-        return -1;
     int next_turn_hit = 5 * (drops + 1) + 6;
-    if (!mafiaIsPastRevision(15493)) //old behaviour
-    {
-        if (drops != 0)
-            next_turn_hit += 1;
-    }
     return MAX(0, next_turn_hit - progress);
 }
 
@@ -3852,7 +3844,7 @@ float averageAdventuresForConsumable(item it, boolean assume_monday)
 			continue;
 		adventures += a * (1.0 / to_float(adventures_string.count()));
 	}
-    if (it == lookupItem("affirmation cookie"))
+    if (it == $item[affirmation cookie])
         adventures += 3;
     if (it == $item[White Citadel burger])
     {
@@ -3916,7 +3908,7 @@ boolean monsterIsGhost(monster m)
         return true;
     if ($monsters[boneless blobghost,the ghost of Vanillica \"Trashblossom\" Gorton,restless ghost,The Icewoman,the ghost of Monsieur Baguelle,The ghost of Lord Montague Spookyraven,The Headless Horseman,The ghost of Ebenoozer Screege,The ghost of Sam McGee,The ghost of Richard Cockingham,The ghost of Jim Unfortunato,The ghost of Waldo the Carpathian,the ghost of Oily McBindle] contains m)
         return true;
-    if (lookupMonster("Emily Koops, a spooky lime") == m)
+    if ($monster[Emily Koops, a spooky lime] == m)
         return true;*/
     return false;
 }
@@ -3993,8 +3985,8 @@ boolean monster_has_zero_turn_cost(monster m)
 {
     if (m.attributes.contains_text("FREE"))
         return true;
-    if (m == lookupMonster("sausage goblin") && m != $monster[none]) return true;
-    if (lookupMonsters("LOV Engineer,LOV Enforcer,LOV Equivocator") contains m) return true;
+    if (m == $monster[sausage goblin] && m != $monster[none]) return true;
+    if ($monsters[LOV Engineer,LOV Enforcer,LOV Equivocator] contains m) return true;
         
     if ($monsters[lynyrd] contains m) return true; //not marked as FREE in attributes
     //if ($monsters[Black Crayon Beast,Black Crayon Beetle,Black Crayon Constellation,Black Crayon Golem,Black Crayon Demon,Black Crayon Man,Black Crayon Elemental,Black Crayon Crimbo Elf,Black Crayon Fish,Black Crayon Goblin,Black Crayon Hippy,Black Crayon Hobo,Black Crayon Shambling Monstrosity,Black Crayon Manloid,Black Crayon Mer-kin,Black Crayon Frat Orc,Black Crayon Penguin,Black Crayon Pirate,Black Crayon Flower,Black Crayon Slime,Black Crayon Undead Thing,Black Crayon Spiraling Shape,broodling seal,Centurion of Sparky,heat seal,hermetic seal,navy seal,Servant of Grodstank,shadow of Black Bubbles,Spawn of Wally,watertight seal,wet seal,lynyrd,BRICKO airship,BRICKO bat,BRICKO cathedral,BRICKO elephant,BRICKO gargantuchicken,BRICKO octopus,BRICKO ooze,BRICKO oyster,BRICKO python,BRICKO turtle,BRICKO vacuum cleaner,Witchess Bishop,Witchess King,Witchess Knight,Witchess Ox,Witchess Pawn,Witchess Queen,Witchess Rook,Witchess Witch,The ghost of Ebenoozer Screege,The ghost of Lord Montague Spookyraven,The ghost of Waldo the Carpathian,The Icewoman,The ghost of Jim Unfortunato,the ghost of Sam McGee,the ghost of Monsieur Baguelle,the ghost of Vanillica "Trashblossom" Gorton,the ghost of Oily McBindle,boneless blobghost,The ghost of Richard Cockingham,The Headless Horseman,Emily Koops\, a spooky lime,time-spinner prank,random scenester,angry bassist,blue-haired girl,evil ex-girlfriend,peeved roommate] contains m)
@@ -4003,7 +3995,9 @@ boolean monster_has_zero_turn_cost(monster m)
         return true;
     if (my_familiar() == $familiar[machine elf] && my_location() == $location[the deep machine tunnels] && get_property_int("_machineTunnelsAdv") < 5)
         return true;
-    if (lookupMonsters("terrible mutant,slime blob,government bureaucrat,angry ghost,annoyed snake") contains m && get_property_int("_voteFreeFights") < 3)
+    if ($monsters[terrible mutant,slime blob,government bureaucrat,angry ghost,annoyed snake] contains m && get_property_int("_voteFreeFights") < 3)
+    	return true;
+    if ($monsters[biker,burnout,jock,party girl,"plain" girl] contains m && get_property_int("_neverendingPartyFreeTurns") < 10)
     	return true;
     return false;
 }
@@ -4230,6 +4224,16 @@ boolean canAccessMall()
 	if (!get_property_boolean("autoSatisfyWithMall")) return false;
 	if (my_ascensions() == 0 && !get_property_ascension("lastDesertUnlock")) return false;
 	return true;
+}
+
+string generateEquipmentLink(item equipment)
+{
+	if (!equipment.have()) return "";
+	if (equipment.equipped()) return "inventory.php?which=2";
+	
+	string ftext_value = equipment.replace_string(" ", "+").entity_encode();
+	if (equipment.item_amount() == 0 && can_interact() && equipment.storage_amount() > 0) return "storage.php?which=2&ftext=" + ftext_value;
+	return "inventory.php?which=2&ftext=" + ftext_value;
 }
 //Allows fast querying of which effects have which numeric_modifier()s.
 
@@ -4478,13 +4482,13 @@ QuestState QuestStateFromManualStep(string manual_value)
 boolean [string] __numeric_modifier_names = $strings[Familiar Weight,Monster Level,Combat Rate,Initiative,Experience,Item Drop,Meat Drop,Damage Absorption,Damage Reduction,Cold Resistance,Hot Resistance,Sleaze Resistance,Spooky Resistance,Stench Resistance,Mana Cost,Moxie,Moxie Percent,Muscle,Muscle Percent,Mysticality,Mysticality Percent,Maximum HP,Maximum HP Percent,Maximum MP,Maximum MP Percent,Weapon Damage,Ranged Damage,Spell Damage,Spell Damage Percent,Cold Damage,Hot Damage,Sleaze Damage,Spooky Damage,Stench Damage,Cold Spell Damage,Hot Spell Damage,Sleaze Spell Damage,Spooky Spell Damage,Stench Spell Damage,Underwater Combat Rate,Fumble,HP Regen Min,HP Regen Max,MP Regen Min,MP Regen Max,Adventures,Familiar Weight Percent,Weapon Damage Percent,Ranged Damage Percent,Stackable Mana Cost,Hobo Power,Base Resting HP,Resting HP Percent,Bonus Resting HP,Base Resting MP,Resting MP Percent,Bonus Resting MP,Critical Hit Percent,PvP Fights,Volleyball,Sombrero,Leprechaun,Fairy,Meat Drop Penalty,Hidden Familiar Weight,Item Drop Penalty,Initiative Penalty,Food Drop,Booze Drop,Hat Drop,Weapon Drop,Offhand Drop,Shirt Drop,Pants Drop,Accessory Drop,Volleyball Effectiveness,Sombrero Effectiveness,Leprechaun Effectiveness,Fairy Effectiveness,Familiar Weight Cap,Slime Resistance,Slime Hates It,Spell Critical Percent,Muscle Experience,Mysticality Experience,Moxie Experience,Effect Duration,Candy Drop,DB Combat Damage,Sombrero Bonus,Familiar Experience,Sporadic Meat Drop,Sporadic Item Drop,Meat Bonus,Pickpocket Chance,Combat Mana Cost,Muscle Experience Percent,Mysticality Experience Percent,Moxie Experience Percent,Minstrel Level,Muscle Limit,Mysticality Limit,Moxie Limit,Song Duration,Prismatic Damage,Smithsness,Supercold Resistance,Reduce Enemy Defense,Pool Skill,Surgeonosity];
 
 
-boolean [monster] __genie_invalid_monsters = $monsters[ninja snowman assassin,modern zmobie,big swarm of ghuol whelps,giant swarm of ghuol whelps,swarm of ghuol whelps,dirty old lihc,ghostly pickle factory worker,mouthless murmur,Mrs. Freeze,Slime Tube monster,Xiblaxian political prisoner,snakefire in the grass,Spant soldier,BRICKO cathedral,BRICKO airship,giant amorphous blob,amorphous blob,"Blofeld",Thanksgolem,time-spinner prank,boneless blobghost,Source Agent,One Thousand Source Agents,giant rubber spider,skulldozer,your butt,Clara,Jick's butt,Brick Mulligan\, the Bartender,Trophyfish,Drunk cowpoke,Wannabe gunslinger,Surly gambler,Cow cultist,Hired gun,Camp cook,Skeletal gunslinger,Restless ghost,Buzzard,Mountain lion,Grizzled bear,Diamondback rattler,Coal snake,Frontwinder,Caugr,Pyrobove,Spidercow,Moomy,Jeff the Fancy Skeleton,Daisy the Unclean,Pecos Dave,Pharaoh Amoon-Ra Cowtep,Snake-Eyes Glenn,Former Sheriff Dan Driscoll,Unusual construct,Granny Hackleton,Villainous Minion,Villainous Henchperson,Villainous Villain,LOV Enforcer,LOV Engineer,LOV Equivocator,Abcrusher 4000&trade;,All-Hallow's Steve,Apathetic lizardman,Aquaconda,Baron von Ratsworth,Beast with X Ears,Beast with X Eyes,Bee swarm,Bee thoven,Beebee gunners,Beebee King,Beebee queue,Beelephant,Best Game Ever,Biclops,Black pudding,Bonerdagon,Book of Faces,Booty crab,BRICKO elephant,BRICKO gargantuchicken,BRICKO octopus,BRICKO oyster,BRICKO python,BRICKO turtle,BRICKO vacuum cleaner,Broodling seal,Brutus\, the toga-clad lout,Bugbear Captain,Bugbear robo-surgeon,Buzzerker,C.A.R.N.I.V.O.R.E. Operative,Candied Yam Golem,Canned goblin conspirator,Carbuncle Top,Carnivorous dill plant,Caveman Dan,Centurion of Sparky,Chatty coworker,Chester,Chief Electronic Overseer,Chocolate hare,Chocolate-cherry prairie dog,Cosmetics wraith,Count Drunkula,Count Drunkula (Hard Mode),crazy bastard,Croqueteer,Cyrus the Virus,Danglin' Chad,Deadly Hydra,Demon of New Wave,Disorganized files,Dr. Awkward,Drownedbeat,Drunken rat king,E.V.E.\, the robot zombie,Ed the Undying,Elp&iacute;zo & Crosybdis,Endless conference call,Enormous blob of gray goo,Escalatormaster&trade;,Essence of Interspecies Respect,Essence of Soy,Essence of Tofu,Evil spaghetti cult assassin,Extremely annoyed witch,Falls-From-Sky,Falls-From-Sky (Hard Mode),Family of kobolds,Father McGruber,Father Nikolai Ravonovich,Fear Man,Fearsome giant squid,Fearsome Wacken,Felonia\, Queen of the Spooky Gravy Fairies,Ferocious roc,Filthworm drone,Filthworm royal guard,Fire truck,Fnord the Unspeakable,Frank &quot;Skipper&quot; Dan\, the Accordion Lord,Frosty,Frozen Solid Snake,Full-length mirror,Georgepaul\, the Balldodger,ghost of Elizabeth Spookyraven,Ghost of Fernswarthy's Grandfather,Ghostly pickle factory worker,Giant bird-creature,Giant jungle python,Giant man-eating shark,Giant sandworm,Giant tardigrade,Gingerbread lawyer,Glass of Orange Juice,Goblin conspirator,Gorgolok\, the Demonic Hellseal,Great Wolf of the Air,Great Wolf of the Air (Hard Mode),Groar,Guajolote Cad&aacute;ver,Guard turtle,Gummi plesiosaur,Gurgle,Guy Made Of Bees,Hammered Yam Golem,Hank North\, Photojournalist,Heat seal,Heimandatz\, Nacho Golem,Hermetic seal,The Hermit,Hideous slide show,Hodgman\, The Hoboverlord,Holographic army,Hot bugbear,Hot ghost,Hot skeleton,Hot vampire,Hot werewolf,Hot zombie,Huge ghuol,Hunting seal,Ice cream truck,Inebriated Tofurkey,Jocko Homo,Johnringo\, the Netdragger,Knob Goblin King,Knott Slanding,Largish blob of gray goo,Larry of the Field of Signs,Larval filthworm,Legal alien,Legstrong&trade; stationary bicycle,Little blob of gray goo,Lord Spookyraven,Lumpy\, the Demonic Sauceblob,Malevolent Tofurkey,Mayor Ghost,Mayor Ghost (Hard Mode),Mimic,Moister oyster,Moneybee,Monty Basingstoke-Pratt\, IV,Mumblebee,Naughty Sorceress,Neil,Next-generation Frat Boy,Novia Cad&aacute;ver,Novio Cad&aacute;ver,Ol' Scratch,Oscus,your overflowing inbox,Padre Cad&aacute;ver,panicking Knott Yeti,Peanut,Peregrino Cad&aacute;ver,Persona Inocente Cad&aacute;ver,Plastered Can of Cranberry Sauce,Monstrous Boiler,Possessed Can of Cranberry Sauce,Procedurally-generated skeleton,Professor Jacking,Protector Spectre,Queen Bee,Queen filthworm,Rack of free weights,Rock Pop weasel,Rotten dolphin thief,sentient ATM,Your Shadow,Skelter Butleton\, the Butler Skeleton,Skulldozer,Slow Talkin' Elliot,Smut orc pervert,Snapdragon,Somebody else's butt,Somerset Lopez\, Demon Mariachi,Soused Stuffing Golem,Space beast matriarch,Space beast,Spaghetti Demon,Spawn of Wally,Spider conspirator,Spider-goblin conspirator,Spider-legged witch's hut,Spirit alarm clock,Stella\, the Demonic Turtle Poacher,Storm cow,Stuffing Golem,Tedious spreadsheet,The Big Wisniewski,Crimbomega,The Krampus,The Landscaper,The Man,The Nuge,The Server,The Sierpinski brothers,The Temporal Bandit,The Unkillable Skeleton,The Unkillable Skeleton (Hard Mode),Tiger-lily,Time-spinner prank,Tin can conspirator,Tin spider conspirator,Tomb rat king,Tome of Tropes,Totally Malicious 'Zine,Treadmill,Tio Cad&aacute;ver,Unearthed monstrosity,Unoptimized database,Vanya's Creature,Victor the Insult Comic Hellhound,Vine gar,War Frat Streaker,Wasp in a wig,Water cooler,White Bone Demon,Wu Tang the Betrayer,Wumpus,X Bottles of Beer on a Golem,X Stone Golem,X-dimensional horror,X-headed Hydra,Xiblaxian political prisoner,Your Brain,Zim Merman,Zombie Homeowners' Association,Zombie Homeowners' Association (Hard Mode),Zombo,7-Foot Dwarf (Moiling),7-Foot Dwarf (Royale),<s>Killer</s> Festive Arc-Welding Elfbot,<s>Killer</s> Festive Decal-Applying Elfbot,<s>Killer</s> Festive Laser-Calibrating Elfbot,<s>Killer</s> Festive Weapons-Assembly Elfbot,Underworld Tree,Accountant-Barbarian,Acoustic electric eel,Alien,Alien queen,alien UFO,Aquabat,Aquagoblin,Auqadargon,Big Wisnaqua,Boss Bat,Boss Bat?,Dad Sea Monkee,Donerbagon,Dr. Aquard,Ed the Undying (1),Ed the Undying (2),Ed the Undying (3),Ed the Undying (4),Ed the Undying (5),Ed the Undying (6),Ed the Undying (7),gingerbread vigilante,Gorgolok\, the Infernal Seal (Inner Sanctum),Gorgolok\, the Infernal Seal (The Nemesis' Lair),Gorgolok\, the Infernal Seal (Volcanic Cave),hulking bridge troll,Lord Soggyraven,Lumpy\, the Sinister Sauceblob (Inner Sanctum),Lumpy\, the Sinister Sauceblob (The Nemesis' Lair),Lumpy\, the Sinister Sauceblob (Volcanic Cave),Mammon the Elephant,Naughty Sorceress (2),Naughty Sorceress (3),new Knob Goblin King,Protector Spurt,Shub-Jigguwatt\, Elder God of Violence,Somerset Lopez\, Dread Mariachi (Inner Sanctum),Somerset Lopez\, Dread Mariachi (The Nemesis' Lair),Somerset Lopez\, Dread Mariachi (Volcanic Cave),Spaghetti Elemental (Inner Sanctum),Spaghetti Elemental (The Nemesis' Lair),Spaghetti Elemental (Volcanic Cave),Spirit of New Wave (Inner Sanctum),Spirit of New Wave (The Nemesis' Lair),Spirit of New Wave (Volcanic Cave),Stella\, the Turtle Poacher (Inner Sanctum),Stella\, the Turtle Poacher (The Nemesis' Lair),Stella\, the Turtle Poacher (Volcanic Cave),The Aquaman,The Avatar of Sneaky Pete,The Bat in the Spats,The Clownlord Beelzebozo,The Large-Bellied Snitch,The Rain King,The Silent Nightmare,The Terrible Pinch,The Thing with No Name,The Thorax,Thug 1 and Thug 2,Yog-Urt\, Elder Goddess of Hatred,You the Adventurer,Your winged yeti,The Abominable Fudgeman,The Author,Kudzu,Mansquito,Miss Graves,The Plumber,The Mad Libber,Doc Clock,Mr. Burns,The Inquisitor,ancient protector spirit (The Hidden Apartment Building),ancient protector spirit (The Hidden Bowling Alley),ancient protector spirit (The Hidden Hospital),ancient protector spirit (The Hidden Office Building),Argarggagarg the Dire Hellseal,Ringogeorge\, the Bladeswitcher,Ron "The Weasel" Copperhead,Scott the Miner,Seannery the Conman,The Avatar of Boris,The Avatar of Jarlsberg,The Barrelmech of Diogenes,The Beefhemoth,The Colollilossus,The Cray-Kin,the Crimborg,the darkness (blind),The Emperor,the former owner of the Skeleton Store,The Frattlesnake,The Free Man,The Fudge Wizard,The ghost of Ebenoozer Screege,The ghost of Jim Unfortunato,The ghost of Lord Montague Spookyraven,the ghost of Monsieur Baguelle,the ghost of Oily McBindle,the ghost of Phil Bunion,The ghost of Richard Cockingham,The ghost of Sam McGee,The ghost of Vanillica "Trashblossom" Gorton,The ghost of Waldo the Carpathian,the gunk,The Headless Horseman,The Icewoman,The Jokester,The Lavalier,The Luter,The Mariachi With No Name,The Master of Thieves,The Mastermind,the most embarrassing moment in your entire life,the realization that everyone you love will die someday,The Sagittarian,The Snake With Like Ten Heads,The Unknown Accordion Thief,The Unknown Disco Bandit,The Unknown Pastamancer,The Unknown Sauceror,The Unknown Seal Clubber,The Unknown Turtle Tamer,The Whole Kingdom,Yakisoba the Executioner,the abstract concept of poverty,ancient protector spirit, ancient protector spirit (obsolete),Angry Space Marine,Norville Rogers,Norville Rogers,Peacannon,Herman East\, Relivinator,Angry Space Marine,Deputy Nick Soames & Earl,Charity the Zombie Hunter,Special Agent Wallace Burke Corrigan,Rag-tag band of survivors,Wesley J. "Wes" Campbell,Zombie-huntin' feller,Burning Snake of Fire,CDMoyer's butt,HotStuff's butt,Mr Skullhead's butt,Multi Czar's butt,Don Crimbo,intelligent alien,Kleptobrainiac,LOLmec,mayonnaise wasp,Cheetahman,Microwave Magus,Kung-Fu Hustler,Tasmanian Dervish,Macho Man,Iron Chef,Entire Shoplifter,Mr. Loathing,Metaphysical Gastronomist,Kleptobrainiac,Savage Beatnik,Creamweaver,Smooth Criminal,Fire Fighter,Cereal Arsonist,Burnglar,Grease Trapper,Ham Shaman,Porkpocket,Leonard,Ghostpuncher,Plague Chef,Batburglar,Arthur Frankenstein,Snowbrawler,Ice Cream Conjurer,Iceberglar,Granola Barbarian,Cheese Wizard,Assassin,Odorous Humongous,queen bee (Spelunky),small hostile animal,hostile plant,hostile intelligent alien,hostile plant,large hostile plant,exotic hostile plant,small hostile animal,large hostile animal,exotic hostile animal,Spant drone,Murderbot drone,Murderbot soldier,hostile intelligent alien,bat,cobra,snake,spider,bee,scorpion,skeleton,tikiman,caveman,yeti,crocodile man,cultist,magma man,mummy,devil,vampire,cobra,snake,spider,spider queen,skeleton,vampire,bee,mummy,Bananubis,Yomama,common criminal,uncommon criminal,rare criminal,low-level mook,vicious plant creature,vine-controlled botanist,low-level mook,giant leech,giant mosquito,low-level mook,lovestruck goth dude,walking skeleton,mid-level mook,liquid plumber,plumber's helper,mid-level mook,former inmate,former guard,mid-level mook,very [adjective] henchwoman,very [adjective] henchman,high-level mook,time bandit,clockwork man,high-level mook,serial arsonist,burner,high-level mook,inquisitee,trivia researcher,screambat,Mother Slime,anesthesiologist bugbear,cheerless mime scientist,cheerless mime soldier,Elf Hobo,outlaw leader,Richard X,Uncle Hobo,wall of bones,wall of meat,wall of skin,Principal Mooney,shopkeeper,topiary golem,silent scream,Your Lack of Reflection,Clancy,Jerry Bradford,evil spaghetti cult priest,evil spaghetti cultist,evil trumpet-playing mariachi,evil vihuela-playing mariachi,haunted soup tureen,infernal seal larva,infernal seal spawn,pernicious puddle of pesto,psychedelic fur,slithering hollandaise glob,talking head,vengeful turtle spectre,b&eacute;arnaise zombie];
+boolean [monster] __genie_invalid_monsters = $monsters[ninja snowman assassin,modern zmobie,big swarm of ghuol whelps,giant swarm of ghuol whelps,swarm of ghuol whelps,dirty old lihc,ghostly pickle factory worker,mouthless murmur,Mrs. Freeze,Slime Tube monster,Xiblaxian political prisoner,snakefire in the grass,Spant soldier,BRICKO cathedral,BRICKO airship,giant amorphous blob,amorphous blob,"Blofeld",Thanksgolem,time-spinner prank,boneless blobghost,Source Agent,One Thousand Source Agents,giant rubber spider,skulldozer,your butt,Clara,Jick's butt,Brick Mulligan\, the Bartender,Trophyfish,Drunk cowpoke,Wannabe gunslinger,Surly gambler,Cow cultist,Hired gun,Camp cook,Skeletal gunslinger,Restless ghost,Buzzard,Mountain lion,Grizzled bear,Diamondback rattler,Coal snake,Frontwinder,Caugr,Pyrobove,Spidercow,Moomy,Jeff the Fancy Skeleton,Daisy the Unclean,Pecos Dave,Pharaoh Amoon-Ra Cowtep,Snake-Eyes Glenn,Former Sheriff Dan Driscoll,Unusual construct,Granny Hackleton,Villainous Minion,Villainous Henchperson,Villainous Villain,LOV Enforcer,LOV Engineer,LOV Equivocator,Abcrusher 4000&trade;,All-Hallow's Steve,Apathetic lizardman,Aquaconda,Baron von Ratsworth,Beast with X Ears,Beast with X Eyes,Bee swarm,Bee thoven,Beebee gunners,Beebee King,Beebee queue,Beelephant,Best Game Ever,Biclops,Black pudding,Bonerdagon,Book of Faces,Booty crab,BRICKO elephant,BRICKO gargantuchicken,BRICKO octopus,BRICKO oyster,BRICKO python,BRICKO turtle,BRICKO vacuum cleaner,Broodling seal,Brutus\, the toga-clad lout,Bugbear Captain,Bugbear robo-surgeon,Buzzerker,C.A.R.N.I.V.O.R.E. Operative,Candied Yam Golem,Canned goblin conspirator,Carbuncle Top,Carnivorous dill plant,Caveman Dan,Centurion of Sparky,Chatty coworker,Chester,Chief Electronic Overseer,Chocolate hare,Chocolate-cherry prairie dog,Cosmetics wraith,Count Drunkula,Count Drunkula (Hard Mode),crazy bastard,Croqueteer,Cyrus the Virus,Danglin' Chad,Deadly Hydra,Demon of New Wave,Disorganized files,Dr. Awkward,Drownedbeat,Drunken rat king,E.V.E.\, the robot zombie,Ed the Undying,Elp&iacute;zo & Crosybdis,Endless conference call,Enormous blob of gray goo,Escalatormaster&trade;,Essence of Interspecies Respect,Essence of Soy,Essence of Tofu,Evil spaghetti cult assassin,Extremely annoyed witch,Falls-From-Sky,Falls-From-Sky (Hard Mode),Family of kobolds,Father McGruber,Father Nikolai Ravonovich,Fear Man,Fearsome giant squid,Fearsome Wacken,Felonia\, Queen of the Spooky Gravy Fairies,Ferocious roc,Filthworm drone,Filthworm royal guard,Fire truck,Fnord the Unspeakable,Frank &quot;Skipper&quot; Dan\, the Accordion Lord,Frosty,Frozen Solid Snake,Full-length mirror,Georgepaul\, the Balldodger,ghost of Elizabeth Spookyraven,Ghost of Fernswarthy's Grandfather,Ghostly pickle factory worker,Giant bird-creature,Giant jungle python,Giant man-eating shark,Giant sandworm,Giant tardigrade,Gingerbread lawyer,Glass of Orange Juice,Goblin conspirator,Gorgolok\, the Demonic Hellseal,Great Wolf of the Air,Great Wolf of the Air (Hard Mode),Groar,Guajolote Cad&aacute;ver,Guard turtle,Gummi plesiosaur,Gurgle,Guy Made Of Bees,Hammered Yam Golem,Hank North\, Photojournalist,Heat seal,Heimandatz\, Nacho Golem,Hermetic seal,The Hermit,Hideous slide show,Hodgman\, The Hoboverlord,Holographic army,Hot bugbear,Hot ghost,Hot skeleton,Hot vampire,Hot werewolf,Hot zombie,Huge ghuol,Hunting seal,Ice cream truck,Inebriated Tofurkey,Jocko Homo,Johnringo\, the Netdragger,Knob Goblin King,Knott Slanding,Largish blob of gray goo,Larry of the Field of Signs,Larval filthworm,Legal alien,Legstrong&trade; stationary bicycle,Little blob of gray goo,Lord Spookyraven,Lumpy\, the Demonic Sauceblob,Malevolent Tofurkey,Mayor Ghost,Mayor Ghost (Hard Mode),Mimic,Moister oyster,Moneybee,Monty Basingstoke-Pratt\, IV,Mumblebee,Naughty Sorceress,Neil,Next-generation Frat Boy,Novia Cad&aacute;ver,Novio Cad&aacute;ver,Ol' Scratch,Oscus,your overflowing inbox,Padre Cad&aacute;ver,panicking Knott Yeti,Peanut,Peregrino Cad&aacute;ver,Persona Inocente Cad&aacute;ver,Plastered Can of Cranberry Sauce,Monstrous Boiler,Possessed Can of Cranberry Sauce,Procedurally-generated skeleton,Professor Jacking,Protector Spectre,Queen Bee,Queen filthworm,Rack of free weights,Rock Pop weasel,Rotten dolphin thief,sentient ATM,Your Shadow,Skelter Butleton\, the Butler Skeleton,Skulldozer,Slow Talkin' Elliot,Smut orc pervert,Snapdragon,Somebody else's butt,Somerset Lopez\, Demon Mariachi,Soused Stuffing Golem,Space beast matriarch,Space beast,Spaghetti Demon,Spawn of Wally,Spider conspirator,Spider-goblin conspirator,Spider-legged witch's hut,Spirit alarm clock,Stella\, the Demonic Turtle Poacher,Storm cow,Stuffing Golem,Tedious spreadsheet,The Big Wisniewski,Crimbomega,The Krampus,The Landscaper,The Man,The Nuge,The Server,The Sierpinski brothers,The Temporal Bandit,The Unkillable Skeleton,The Unkillable Skeleton (Hard Mode),Tiger-lily,Time-spinner prank,Tin can conspirator,Tin spider conspirator,Tomb rat king,Tome of Tropes,Totally Malicious 'Zine,Treadmill,Tio Cad&aacute;ver,Unearthed monstrosity,Unoptimized database,Vanya's Creature,Victor the Insult Comic Hellhound,Vine gar,War Frat Streaker,Wasp in a wig,Water cooler,White Bone Demon,Wu Tang the Betrayer,Wumpus,X Bottles of Beer on a Golem,X Stone Golem,X-dimensional horror,X-headed Hydra,Xiblaxian political prisoner,Your Brain,Zim Merman,Zombie Homeowners' Association,Zombie Homeowners' Association (Hard Mode),Zombo,7-Foot Dwarf (Moiling),7-Foot Dwarf (Royale),<s>Killer</s> Festive Arc-Welding Elfbot,<s>Killer</s> Festive Decal-Applying Elfbot,<s>Killer</s> Festive Laser-Calibrating Elfbot,<s>Killer</s> Festive Weapons-Assembly Elfbot,Underworld Tree,Accountant-Barbarian,Acoustic electric eel,Alien,Alien queen,alien UFO,Aquabat,Aquagoblin,Auqadargon,Big Wisnaqua,Boss Bat,Boss Bat?,Dad Sea Monkee,Donerbagon,Dr. Aquard,Ed the Undying (1),Ed the Undying (2),Ed the Undying (3),Ed the Undying (4),Ed the Undying (5),Ed the Undying (6),Ed the Undying (7),gingerbread vigilante,Gorgolok\, the Infernal Seal (Inner Sanctum),Gorgolok\, the Infernal Seal (The Nemesis' Lair),Gorgolok\, the Infernal Seal (Volcanic Cave),hulking bridge troll,Lord Soggyraven,Lumpy\, the Sinister Sauceblob (Inner Sanctum),Lumpy\, the Sinister Sauceblob (The Nemesis' Lair),Lumpy\, the Sinister Sauceblob (Volcanic Cave),Mammon the Elephant,Naughty Sorceress (2),Naughty Sorceress (3),new Knob Goblin King,Protector Spurt,Shub-Jigguwatt\, Elder God of Violence,Somerset Lopez\, Dread Mariachi (Inner Sanctum),Somerset Lopez\, Dread Mariachi (The Nemesis' Lair),Somerset Lopez\, Dread Mariachi (Volcanic Cave),Spaghetti Elemental (Inner Sanctum),Spaghetti Elemental (The Nemesis' Lair),Spaghetti Elemental (Volcanic Cave),Spirit of New Wave (Inner Sanctum),Spirit of New Wave (The Nemesis' Lair),Spirit of New Wave (Volcanic Cave),Stella\, the Turtle Poacher (Inner Sanctum),Stella\, the Turtle Poacher (The Nemesis' Lair),Stella\, the Turtle Poacher (Volcanic Cave),The Aquaman,The Avatar of Sneaky Pete,The Bat in the Spats,The Clownlord Beelzebozo,The Large-Bellied Snitch,The Rain King,The Silent Nightmare,The Terrible Pinch,The Thing with No Name,The Thorax,Thug 1 and Thug 2,Yog-Urt\, Elder Goddess of Hatred,You the Adventurer,Your winged yeti,The Abominable Fudgeman,The Author,Kudzu,Mansquito,Miss Graves,The Plumber,The Mad Libber,Doc Clock,Mr. Burns,The Inquisitor,ancient protector spirit (The Hidden Apartment Building),ancient protector spirit (The Hidden Bowling Alley),ancient protector spirit (The Hidden Hospital),ancient protector spirit (The Hidden Office Building),Argarggagarg the Dire Hellseal,Ringogeorge\, the Bladeswitcher,Ron "The Weasel" Copperhead,Scott the Miner,Seannery the Conman,The Avatar of Boris,The Avatar of Jarlsberg,The Barrelmech of Diogenes,The Beefhemoth,The Colollilossus,The Cray-Kin,the Crimborg,the darkness (blind),The Emperor,the former owner of the Skeleton Store,The Frattlesnake,The Free Man,The Fudge Wizard,The ghost of Ebenoozer Screege,The ghost of Jim Unfortunato,The ghost of Lord Montague Spookyraven,the ghost of Monsieur Baguelle,the ghost of Oily McBindle,the ghost of Phil Bunion,The ghost of Richard Cockingham,The ghost of Sam McGee,The ghost of Vanillica "Trashblossom" Gorton,The ghost of Waldo the Carpathian,the gunk,The Headless Horseman,The Icewoman,The Jokester,The Lavalier,The Luter,The Mariachi With No Name,The Master of Thieves,The Mastermind,the most embarrassing moment in your entire life,the realization that everyone you love will die someday,The Sagittarian,The Snake With Like Ten Heads,The Unknown Accordion Thief,The Unknown Disco Bandit,The Unknown Pastamancer,The Unknown Sauceror,The Unknown Seal Clubber,The Unknown Turtle Tamer,The Whole Kingdom,Yakisoba the Executioner,the abstract concept of poverty,ancient protector spirit, ancient protector spirit (obsolete),Angry Space Marine,Norville Rogers,Norville Rogers,Peacannon,Herman East\, Relivinator,Angry Space Marine,Deputy Nick Soames & Earl,Charity the Zombie Hunter,Special Agent Wallace Burke Corrigan,Rag-tag band of survivors,Wesley J. "Wes" Campbell,Zombie-huntin' feller,Burning Snake of Fire,CDMoyer's butt,HotStuff's butt,Mr Skullhead's butt,Multi Czar's butt,Don Crimbo,intelligent alien,Kleptobrainiac,LOLmec,mayonnaise wasp,Cheetahman,Microwave Magus,Kung-Fu Hustler,Tasmanian Dervish,Macho Man,Iron Chef,Entire Shoplifter,Mr. Loathing,Metaphysical Gastronomist,Kleptobrainiac,Savage Beatnik,Creamweaver,Smooth Criminal,Fire Fighter,Cereal Arsonist,Burnglar,Grease Trapper,Ham Shaman,Porkpocket,Leonard,Ghostpuncher,Plague Chef,Batburglar,Arthur Frankenstein,Snowbrawler,Ice Cream Conjurer,Iceberglar,Granola Barbarian,Cheese Wizard,Assassin,Odorous Humongous,queen bee (Spelunky),small hostile animal,hostile plant,hostile intelligent alien,hostile plant,large hostile plant,exotic hostile plant,small hostile animal,large hostile animal,exotic hostile animal,Spant drone,Murderbot drone,Murderbot soldier,hostile intelligent alien,bat,cobra,snake,spider,bee,scorpion,skeleton,tikiman,caveman,yeti,crocodile man,cultist,magma man,mummy,devil,vampire,cobra,snake,spider,[1732]spider queen,[2080]spider queen,skeleton,vampire,bee,mummy,Bananubis,Yomama,common criminal,uncommon criminal,rare criminal,low-level mook,vicious plant creature,vine-controlled botanist,low-level mook,giant leech,giant mosquito,low-level mook,lovestruck goth dude,walking skeleton,mid-level mook,liquid plumber,plumber's helper,mid-level mook,former inmate,former guard,mid-level mook,very [adjective] henchwoman,very [adjective] henchman,high-level mook,time bandit,clockwork man,high-level mook,serial arsonist,burner,high-level mook,inquisitee,trivia researcher,screambat,Mother Slime,anesthesiologist bugbear,cheerless mime scientist,cheerless mime soldier,Elf Hobo,outlaw leader,Richard X,Uncle Hobo,wall of bones,wall of meat,wall of skin,Principal Mooney,shopkeeper,topiary golem,silent scream,Your Lack of Reflection,Clancy,[2050]Jerry Bradford,[2051]Jerry Bradford,[2052]Jerry Bradford,[2053]Jerry Bradford,[2054]Jerry Bradford,[2055]Jerry Bradford,[2056]Jerry Bradford,[2057]Jerry Bradford,[2058]Jerry Bradford,evil spaghetti cult priest,evil spaghetti cultist,evil trumpet-playing mariachi,evil vihuela-playing mariachi,haunted soup tureen,infernal seal larva,infernal seal spawn,pernicious puddle of pesto,psychedelic fur,slithering hollandaise glob,talking head,vengeful turtle spectre,b&eacute;arnaise zombie];
 
-boolean [effect] __genie_invalid_effects = $effects[jukebox hero,Juicy Boost,Meteor Showered,Steely-eyed squint,Blue Eyed Devil,Cereal Killer,Nearly All-Natural,Amazing,Throwing some shade,A rose by any other material,Gaze of the Gazelle,East of Eaten,Robot Friends,Smart Drunk,Margamergency,Pajama Party,Rumpel-Pumped,Song of Battle,Song of Solitude,Buy!\  Sell!\  Buy!\  Sell!,eldritch attunement,The Inquisitor's unknown effect,Filthworm Drone Stench,Filthworm Guard Stench,Filthworm Larva Stench,Green Peace,Red Menace,Video... Games?,things man was not meant to eat,Whitesloshed,thrice-cursed,bendin' hell,Synthesis: Hot,Synthesis: Cold,Synthesis: Pungent,Synthesis: Scary,Synthesis: Greasy,Synthesis: Strong,Synthesis: Smart,Synthesis: Cool,Synthesis: Hardy,Synthesis: Energy,Synthesis: Greed,Synthesis: Collection,Synthesis: Movement,Synthesis: Learning,Synthesis: Style,The Good Salmonella,Giant Growth,Lovebotamy,Open Heart Surgery,Wandering Eye Surgery,gar-ish,Puissant Pressure,Perspicacious Pressure,Pulchritudinous Pressure,It's Good To Be Royal!,The Fire Inside,Puzzle Champ,The Royal We,Hotform,Coldform,Sleazeform,Spookyform,Stenchform,A Hole in the World,Bored With Explosions,thanksgetting,Barrel of Laughs,Beer Barrel Polka,Superdrifting,Covetin' Drunk,All Wound Up,Driving Observantly,Driving Waterproofly,Bow-Legged Swagger,First Blood Kiwi,You've Got a Stew Going!,Shepherd's Breath,Of Course It Looks Great,Doing The Hustle,Fortune of the Wheel,Shelter of Shed,Hot Sweat,Cold Sweat,Rank Sweat,Black Sweat,Flop Sweat,Mark of Candy Cain,Black Day,What Are The Odds!?,Dancin' Drunk, School Spirited,Muffled,Sour Grapes,Song of Fortune,Pork Barrel,Ashen,Brooding,Purple Tongue,Green Tongue,Orange Tongue,Red Tongue,Blue Tongue,Black Tongue,Cupcake of Choice,The Cupcake of Wrath,Shiny Happy Cupcake,Your Cupcake Senses Are Tingling,Tiny Bubbles in the Cupcake,Broken Heart,Fiery Heart,Cold Hearted,Sweet Heart,Withered Heart,Lustful Heart,Pasta Eyeball,Cowlick,It's Ridiculous,Dangerous Zone Song,Tiffany's Breakfast,Flashy Dance Song,Pet Shop Song,Dark Orchestral Song,Bounty of Renenutet,Octolus Gift,Magnetized Ears,Lucky Struck,Drunk and Avuncular,Ministrations in the Dark,Record Hunger,SuperStar,Everything Looks Blue,Everything Looks Red,Everything Looks Yellow,Snow Fortified,Bubble Vision,High-Falutin',Song of Accompaniment,Song of Cockiness,Song of the Glorious Lunch,Song of the Southern Turtle,Song of Sauce,Song of Bravado,Song of Slowness,Song of Starch,Song of the North,It's a Good Life!,I'll Have the Soup,Why So Serious?,&quot;The Disease&quot;,Unmuffled,Overconfident,Shrieking Weasel,Biker Swagger,Punchable Face,ChibiChanged&trade;,Avatar of She-Who-Was,Behind the Green Curtain,Industrially Frosted,Mer-kinkiness,Hotcaked,[1553]Slicked-Back Do,Eggscitingly Colorful,Party on Your Skin,Blessing of the Spaghetto,Force of Mayo Be With You,Ear Winds,Desenfantasmada,Skull Full of Hot Chocolate,Hide of Sobek,Wassailing You,Barrel Chested,Mimeoflage,Tainted Love Potion,Avatar of the Storm Tortoise,Fortunate\, Son,Avatar of the War Snapper,Faerie Fortune,Heroic Fortune,Fantasy Faerie Blessing,Brewed Up,Poison For Blood,Fantastical Health,Spirit of Galactic Unity,Inner Elf,The Best Hair You've Ever Had,Hardened Sweatshirt,Yeast-Hungry,More Mansquito Than Man,Spiced Up,Warlock\, Warstock\, and Warbarrel,Tomes of Opportunity,Temporary Blindness,Rolando's Rondo of Resisto,Shielded Unit,Mist Form,Cinco Elementos]; //'
+boolean [effect] __genie_invalid_effects = $effects[jukebox hero,Juicy Boost,Meteor Showered,Steely-eyed squint,Blue Eyed Devil,Cereal Killer,Nearly All-Natural,Amazing,Throwing some shade,A rose by any other material,Gaze of the Gazelle,East of Eaten,Robot Friends,Smart Drunk,Margamergency,Pajama Party,Rumpel-Pumped,Song of Battle,Song of Solitude,Buy!\  Sell!\  Buy!\  Sell!,eldritch attunement,The Inquisitor's unknown effect,Filthworm Drone Stench,Filthworm Guard Stench,Filthworm Larva Stench,Green Peace,Red Menace,Video... Games?,things man was not meant to eat,Whitesloshed,thrice-cursed,bendin' hell,Synthesis: Hot,Synthesis: Cold,Synthesis: Pungent,Synthesis: Scary,Synthesis: Greasy,Synthesis: Strong,Synthesis: Smart,Synthesis: Cool,Synthesis: Hardy,Synthesis: Energy,Synthesis: Greed,Synthesis: Collection,Synthesis: Movement,Synthesis: Learning,Synthesis: Style,The Good Salmonella,Giant Growth,Lovebotamy,Open Heart Surgery,Wandering Eye Surgery,gar-ish,Puissant Pressure,Perspicacious Pressure,Pulchritudinous Pressure,It's Good To Be Royal!,The Fire Inside,Puzzle Champ,The Royal We,Hotform,Coldform,Sleazeform,Spookyform,Stenchform,A Hole in the World,Bored With Explosions,thanksgetting,Barrel of Laughs,Beer Barrel Polka,Superdrifting,Covetin' Drunk,All Wound Up,Driving Observantly,Driving Waterproofly,Bow-Legged Swagger,First Blood Kiwi,You've Got a Stew Going!,Shepherd's Breath,Of Course It Looks Great,Doing The Hustle,Fortune of the Wheel,Shelter of Shed,Hot Sweat,Cold Sweat,Rank Sweat,Black Sweat,Flop Sweat,Mark of Candy Cain,Black Day,What Are The Odds!?,Dancin' Drunk, School Spirited,Muffled,Sour Grapes,Song of Fortune,Pork Barrel,Ashen,Brooding,Purple Tongue,Green Tongue,Orange Tongue,Red Tongue,Blue Tongue,Black Tongue,Cupcake of Choice,The Cupcake of Wrath,Shiny Happy Cupcake,Your Cupcake Senses Are Tingling,Tiny Bubbles in the Cupcake,Broken Heart,Fiery Heart,Cold Hearted,Sweet Heart,Withered Heart,Lustful Heart,Pasta Eyeball,Cowlick,It's Ridiculous,Dangerous Zone Song,Tiffany's Breakfast,Flashy Dance Song,Pet Shop Song,Dark Orchestral Song,Bounty of Renenutet,Octolus Gift,Magnetized Ears,Lucky Struck,Drunk and Avuncular,Ministrations in the Dark,Record Hunger,SuperStar,Everything Looks Blue,Everything Looks Red,Everything Looks Yellow,Snow Fortified,Bubble Vision,High-Falutin',Song of Accompaniment,Song of Cockiness,Song of the Glorious Lunch,Song of the Southern Turtle,Song of Sauce,Song of Bravado,Song of Slowness,Song of Starch,Song of the North,It's a Good Life!,I'll Have the Soup,Why So Serious?,&quot;The Disease&quot;,Unmuffled,Overconfident,Shrieking Weasel,Biker Swagger,Punchable Face,ChibiChanged&trade;,Avatar of She-Who-Was,Behind the Green Curtain,Industrially Frosted,Mer-kinkiness,Hotcaked,[1553]Slicked-Back Do,Eggscitingly Colorful,Party on Your Skin,Blessing of the Spaghetto,Force of Mayo Be With You,Ear Winds,Desenfantasmada,Skull Full of Hot Chocolate,Hide of Sobek,Wassailing You,Barrel Chested,Mimeoflage,Tainted Love Potion,Avatar of the Storm Tortoise,Fortunate\, Son,Avatar of the War Snapper,Faerie Fortune,Heroic Fortune,Fantasy Faerie Blessing,Brewed Up,Poison For Blood,Fantastical Health,Spirit of Galactic Unity,Inner Elf,The Best Hair You've Ever Had,Hardened Sweatshirt,Yeast-Hungry,More Mansquito Than Man,Spiced Up,Warlock\, Warstock\, and Warbarrel,Tomes of Opportunity,Temporary Blindness,Rolando's Rondo of Resisto,Shielded Unit,Mist Form,Cinco Elementos,Brined Liver,There's No N in Love]; //'
 //Works: Driving Wastefully, Driving Stealthily, rest untested
 
 boolean [string] __genie_invalid_monster_strings = $strings[Jerry Bradford\, Pokéfam World Champion];
-boolean [string] __genie_invalid_effect_strings = $strings[Double Negavision, Gettin' the Goods,Moose-Warmed Belly,Crimbeau'd,Haunted Liver,Bats Form]; //' because errors on older versions
+boolean [string] __genie_invalid_effect_strings = $strings[Double Negavision, Gettin' the Goods,Moose-Warmed Belly,Crimbeau'd,Bats Form]; //' because errors on older versions
 
 
 int bestModForTableCount(int count)
@@ -4638,6 +4642,17 @@ boolean [effect] genieValidEffects()
 		if (additional_invalid_effects contains e) continue;
 		__genie_valid_effects[e] = true;
 	}
+	/*foreach e in $effects[]
+	{
+		boolean our_belief = false;
+		if (__genie_invalid_effects contains e || additional_invalid_effects contains e)
+		{
+			our_belief = true;
+		}
+		boolean nohookah_belief = e.attributes.contains_text("nohookah");
+		if (our_belief != nohookah_belief)
+			print_html("\"" + e + "\" we believe to be " + our_belief + ", nohookah is " + nohookah_belief);
+	}*/
 	return __genie_valid_effects;
 }
 
