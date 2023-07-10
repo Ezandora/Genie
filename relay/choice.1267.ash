@@ -1,7 +1,7 @@
 import "relay/choice.ash";
 
 
-string __genie_version = "2.2.19";
+string __genie_version = "2.2.20";
 
 //Allows error checking. The intention behind this design is Errors are passed in to a method. The method then sets the error if anything went wrong.
 record Error
@@ -1830,10 +1830,17 @@ string slot_to_plural_string(slot s)
     return s.slot_to_string();
 }
 
-
 string format_today_to_string(string desired_format)
 {
     return format_date_time("yyyyMMdd", today_to_string(), desired_format);
+    //We tried this, and instead at 7:51AM local time, it claimed the day was yesterday. I don't get it either.
+    //return format_date_time("yyyyMMdd hh:mm:ss z", today_to_string() + " " + time_to_string(), desired_format);
+}
+//this messes with your timezone, because why wouldn't it?
+string format_intraday_time_to_string(string desired_format)
+{
+    //return format_date_time("hh:mm:ss z", time_to_string(), desired_format);
+    return format_date_time("hh:mm:ss", time_to_string(), desired_format); //omit time zone, because give it a time zone and suddenly it decides to be Difficult.
 }
 
 
@@ -2329,18 +2336,21 @@ static
     int PATH_OF_THE_PLUMBER = 38;
     int PATH_PLUMBER = 38;
     int PATH_LUIGI = 38;
-    int PATH_MAMA_LUIGI = 38;
     int PATH_MARIO = 38;
     int PATH_LOW_KEY_SUMMER = 39;
     int PATH_LOKI = 39;
     int PATH_GREY_GOO = 40;
+    int PATH_ROBOT = 41;
+    int PATH_QUANTUM_TERRARIUM = 42;
+    int PATH_QUANTUM = 42;
+    int PATH_WILDFIRE = 43;
 }
 
-float numeric_modifier_replacement(item it, string modifier)
+float numeric_modifier_replacement(item it, string modifier_name)
 {
-    string modifier_lowercase = modifier.to_lower_case();
+    string modifier_lowercase = modifier_name.to_lower_case();
     float additional = 0;
-    if (my_path_id() == PATH_G_LOVER && !it.contains_text("g") && !it.contains_text("G"))
+    if (my_path().id == PATH_G_LOVER && !it.contains_text("g") && !it.contains_text("G"))
     	return 0.0;
     if (it == $item[your cowboy boots])
     {
@@ -2368,7 +2378,19 @@ float numeric_modifier_replacement(item it, string modifier)
     	if (it.equipped_amount() == 0)
      	   additional += 5;
     }
-    return numeric_modifier(it, modifier) + additional;
+    if (it == $item[backup camera])
+    {
+    	string camera_mode = get_property("backupCameraMode");
+        if (modifier_lowercase == "monster level" && camera_mode == "ml")
+        {
+        	return clampi(my_level() * 3, 3, 50);
+        }
+        else if (modifier_lowercase == "meat drop" && camera_mode == "meat")
+        	return 50;
+        else if (modifier_lowercase == "initiative" && camera_mode == "init")
+        	return 100;
+    }
+    return numeric_modifier(it, modifier_name) + additional;
 }
 
 
@@ -2420,6 +2442,7 @@ static
     boolean [string][item] __equipment_by_numeric_modifier;
     void initialiseItems()
     {
+    	int maximum_item_id = 0;
         foreach it in $items[]
         {
             //Crafting:
@@ -2432,8 +2455,24 @@ static
                     __items_that_craft_food[ingredient] = true;
                 }
             }*/
-            
+            maximum_item_id = MAX(maximum_item_id, it.to_int());
             //Equipment:
+            if ($slots[hat,weapon,off-hand,back,shirt,pants,acc1,acc2,acc3,familiar] contains it.to_slot())
+            {
+                __equipment[it] = true;
+                if (it.numeric_modifier("combat rate") < 0)
+                    __minus_combat_equipment[it] = true;
+            }
+        }
+        //mafia does not add new items to $items, so, support some new items:
+        for i from maximum_item_id + 1 to maximum_item_id + 100
+        {
+        	item it = i.to_item();
+            if (it == $item[none])
+            {
+            	continue;
+            }
+            
             if ($slots[hat,weapon,off-hand,back,shirt,pants,acc1,acc2,acc3,familiar] contains it.to_slot())
             {
                 __equipment[it] = true;
@@ -2450,30 +2489,33 @@ static
     initialiseItems();
 }
 
-boolean [item] equipmentWithNumericModifier(string modifier)
+boolean [item] equipmentWithNumericModifier(string modifier_name)
 {
-	modifier = modifier.to_lower_case();
+	modifier_name = modifier_name.to_lower_case();
+	//dynamic items here
     boolean [item] dynamic_items;
-    dynamic_items[to_item("kremlin's greatest briefcase")] = true;
+    dynamic_items[to_item("backup camera")] = true;
+    dynamic_items[to_item("unwrapped knock-off retro superhero cape")] = true;
+    dynamic_items[$item[kremlin's greatest briefcase]] = true;
     dynamic_items[$item[your cowboy boots]] = true;
     dynamic_items[$item[a light that never goes out]] = true; //FIXME all smithsness items
-    if (!(__equipment_by_numeric_modifier contains modifier))
+    if (!(__equipment_by_numeric_modifier contains modifier_name))
     {
         //Build it:
         boolean [item] blank;
-        __equipment_by_numeric_modifier[modifier] = blank;
+        __equipment_by_numeric_modifier[modifier_name] = blank;
         foreach it in __equipment
         {
             if (dynamic_items contains it) continue;
-            if (it.numeric_modifier(modifier) != 0.0)
-                __equipment_by_numeric_modifier[modifier][it] = true;
+            if (it.numeric_modifier(modifier_name) != 0.0)
+                __equipment_by_numeric_modifier[modifier_name][it] = true;
         }
     }
     //Certain equipment is dynamic. Inspect them dynamically:
     boolean [item] extra_results;
     foreach it in dynamic_items
     {
-        if (it.numeric_modifier_replacement(modifier) != 0.0)
+        if (it.numeric_modifier_replacement(modifier_name) != 0.0)
         {
             extra_results[it] = true;
         }
@@ -2482,7 +2524,7 @@ boolean [item] equipmentWithNumericModifier(string modifier)
     string secondary_modifier = "";
     foreach e in $elements[hot,cold,spooky,stench,sleaze]
     {
-        if (modifier == e + " damage")
+        if (modifier_name == e + " damage")
             secondary_modifier = e + " spell damage";
     }
     if (secondary_modifier != "")
@@ -2492,11 +2534,11 @@ boolean [item] equipmentWithNumericModifier(string modifier)
     }
     
     if (extra_results.count() == 0)
-        return __equipment_by_numeric_modifier[modifier];
+        return __equipment_by_numeric_modifier[modifier_name];
     else
     {
         //Add extras:
-        foreach it in __equipment_by_numeric_modifier[modifier]
+        foreach it in __equipment_by_numeric_modifier[modifier_name]
         {
             extra_results[it] = true;
         }
@@ -2585,7 +2627,7 @@ boolean mafiaIsPastRevision(int revision_number)
 boolean have_familiar_replacement(familiar f)
 {
     //have_familiar bugs in avatar of sneaky pete for now, so:
-    if (my_path_id() == PATH_AVATAR_OF_BORIS || my_path_id() == PATH_AVATAR_OF_JARLSBERG || my_path_id() == PATH_AVATAR_OF_SNEAKY_PETE)
+    if (my_path().id == PATH_AVATAR_OF_BORIS || my_path().id == PATH_AVATAR_OF_JARLSBERG || my_path().id == PATH_AVATAR_OF_SNEAKY_PETE)
         return false;
     return f.have_familiar();
 }
@@ -2594,11 +2636,11 @@ boolean have_familiar_replacement(familiar f)
 boolean familiar_is_usable(familiar f)
 {
     //r13998 has most of these
-    if (my_path_id() == PATH_AVATAR_OF_BORIS || my_path_id() == PATH_AVATAR_OF_JARLSBERG || my_path_id() == PATH_AVATAR_OF_SNEAKY_PETE || my_path_id() == PATH_ACTUALLY_ED_THE_UNDYING || my_path_id() == PATH_LICENSE_TO_ADVENTURE || my_path_id() == PATH_POCKET_FAMILIARS || my_path_id() == PATH_VAMPIRE)
+    if (my_path().id == PATH_AVATAR_OF_BORIS || my_path().id == PATH_AVATAR_OF_JARLSBERG || my_path().id == PATH_AVATAR_OF_SNEAKY_PETE || my_path().id == PATH_ACTUALLY_ED_THE_UNDYING || my_path().id == PATH_LICENSE_TO_ADVENTURE || my_path().id == PATH_POCKET_FAMILIARS || my_path().id == PATH_VAMPIRE)
         return false;
     if (!is_unrestricted(f))
         return false;
-    if (my_path_id() == PATH_G_LOVER && !f.contains_text("g") && !f.contains_text("G"))
+    if (my_path().id == PATH_G_LOVER && !f.contains_text("g") && !f.contains_text("G"))
         return false;
     //On second thought, this is terrible:
 	/*int single_familiar_run = get_property_int("singleFamiliarRun");
@@ -2608,12 +2650,12 @@ boolean familiar_is_usable(familiar f)
 			return true;
 		return false;
 	}*/
-	if (my_path_id() == PATH_TRENDY)
+	if (my_path().id == PATH_TRENDY)
 	{
 		if (!is_trendy(f))
 			return false;
 	}
-	else if (my_path_id() == PATH_BEES_HATE_YOU)
+	else if (my_path().id == PATH_BEES_HATE_YOU)
 	{
 		if (f.to_string().contains_text("b") || f.to_string().contains_text("B")) //bzzzz!
 			return false; //so not green
@@ -2628,7 +2670,7 @@ boolean skill_is_usable(skill s)
         return false;
     if (!s.is_unrestricted())
         return false;
-    if (my_path_id() == PATH_G_LOVER && (!s.passive || s == $skill[meteor lore]) && !s.contains_text("g") && !s.contains_text("G"))
+    if (my_path().id == PATH_G_LOVER && (!s.passive || s == $skill[meteor lore]) && !s.contains_text("g") && !s.contains_text("G"))
     	return false;
     if ($skills[rapid prototyping] contains s)
         return $item[hand turkey outline].is_unrestricted();
@@ -2658,9 +2700,9 @@ boolean item_is_usable(item it)
 {
     if (!it.is_unrestricted())
         return false;
-    if (my_path_id() == PATH_G_LOVER && !it.contains_text("g") && !it.contains_text("G"))
+    if (my_path().id == PATH_G_LOVER && !it.contains_text("g") && !it.contains_text("G"))
         return false;
-    if (my_path_id() == PATH_BEES_HATE_YOU && (it.contains_text("b") || it.contains_text("B")))
+    if (my_path().id == PATH_BEES_HATE_YOU && (it.contains_text("b") || it.contains_text("B")))
     	return false;
 	return true;
 }
@@ -2674,7 +2716,7 @@ int usable_amount(item it)
 
 boolean effect_is_usable(effect e)
 {
-    if (my_path_id() == PATH_G_LOVER && !e.contains_text("g") && !e.contains_text("G"))
+    if (my_path().id == PATH_G_LOVER && !e.contains_text("g") && !e.contains_text("G"))
         return false;
     return true;
 }
@@ -2952,7 +2994,7 @@ int substatsForLevel(int level)
 int availableFullness()
 {
 	int limit = fullness_limit();
-    if (my_path_id() == PATH_ACTUALLY_ED_THE_UNDYING && limit == 0 && $skill[Replacement Stomach].have_skill())
+    if (my_path().id == PATH_ACTUALLY_ED_THE_UNDYING && limit == 0 && $skill[Replacement Stomach].have_skill())
     {
         limit += 5;
     }
@@ -2962,7 +3004,7 @@ int availableFullness()
 int availableDrunkenness()
 {
     int limit = inebriety_limit();
-    if (my_path_id() == PATH_ACTUALLY_ED_THE_UNDYING && limit == 0 && $skill[Replacement Liver].have_skill())
+    if (my_path().id == PATH_ACTUALLY_ED_THE_UNDYING && limit == 0 && $skill[Replacement Liver].have_skill())
     {
     	limit += 5;
     }
@@ -2973,7 +3015,7 @@ int availableDrunkenness()
 int availableSpleen()
 {
 	int limit = spleen_limit();
-	if (my_path_id() == PATH_ACTUALLY_ED_THE_UNDYING && limit == 0)
+	if (my_path().id == PATH_ACTUALLY_ED_THE_UNDYING && limit == 0)
 	{
         limit += 5; //always true
 		//mafia resets the limits to zero in the underworld because it does, so anti-mafia:
@@ -3451,17 +3493,17 @@ float initiative_modifier_ignoring_plants()
 
 float item_drop_modifier_ignoring_plants()
 {
-    float modifier = item_drop_modifier();
+    float modifier_value = item_drop_modifier();
     
     location my_location = my_location();
     if (my_location != $location[none])
     {
         if (my_location.locationHasPlant("Rutabeggar") || my_location.locationHasPlant("Stealing Magnolia"))
-            modifier -= 25.0;
+            modifier_value -= 25.0;
         if (my_location.locationHasPlant("Kelptomaniac"))
-            modifier -= 40.0;
+            modifier_value -= 40.0;
     }
-    return modifier;
+    return modifier_value;
 }
 
 int monster_level_adjustment_ignoring_plants() //this is unsafe to use in heavy rains
@@ -3530,7 +3572,7 @@ int monster_level_adjustment_for_location(location l)
         ml += 30;
     }
     
-    if (my_path_id() == PATH_HEAVY_RAINS)
+    if (my_path().id == PATH_HEAVY_RAINS)
     {
         //complicated:
         //First, cancel out the my_location() rain:
@@ -3616,6 +3658,14 @@ boolean weapon_is_club(item it)
     if (it.item_type() == "club")
         return true;
     if (it.item_type() == "sword" && $effect[Iron Palms].have_effect() > 0)
+        return true;
+    return false;
+}
+
+boolean weapon_is_sword(item it)
+{
+    if (it.to_slot() != $slot[weapon]) return false;
+    if (it.item_type() == "sword" && $effect[Iron Palms].have_effect() == 0)
         return true;
     return false;
 }
@@ -3745,6 +3795,16 @@ int nextLibramSummonMPCost()
     return libram_mp_cost;
 }
 
+int maximumSimultaneous1hWeaponsEquippable()
+{
+    int weapon_maximum = 1;
+    if ($skill[double-fisted skull smashing].skill_is_usable())
+        weapon_maximum += 1;
+    if (my_familiar() == $familiar[disembodied hand])
+        weapon_maximum += 1;
+    return weapon_maximum;
+}
+
 int equippable_amount(item it)
 {
     if (!it.can_equip()) return it.equipped_amount();
@@ -3753,12 +3813,7 @@ int equippable_amount(item it)
         return MIN(3, it.available_amount());
     if (it.to_slot() == $slot[weapon] && it.weapon_hands() == 1)
     {
-        int weapon_maximum = 1;
-        if ($skill[double-fisted skull smashing].skill_is_usable())
-            weapon_maximum += 1;
-        if (my_familiar() == $familiar[disembodied hand])
-            weapon_maximum += 1;
-        return MIN(weapon_maximum, it.available_amount());
+        return MIN(maximumSimultaneous1hWeaponsEquippable(), it.available_amount());
     }
     return 1;
 }
@@ -3802,11 +3857,17 @@ item [int] generateEquipmentForExtraExperienceOnStat(stat desired_stat, boolean 
     foreach it in equipmentWithNumericModifier(numeric_modifier_string)
     {
     	slot s = it.to_slot();
-        if (s == $slot[shirt] && !(to_skill("Torso Awareness").have_skill() || $skill[Best Dressed].have_skill()))
+        if (s == $slot[shirt] && !(lookupSkill("Torso Awareness").have_skill() || $skill[Best Dressed].have_skill()))
+        	continue;
+        if (s == $slot[weapon] && it.weapon_hands() > 1 && item_slots[$slot[off-hand]] != $item[none]) //can't equip an off-hand and a two-handed weapon
         	continue;
         if (it.available_amount() > 0 && (!require_can_equip_currently || it.can_equip()) && item_slots[it.to_slot()].numeric_modifier(numeric_modifier_string) < it.numeric_modifier(numeric_modifier_string))
         {
             item_slots[it.to_slot()] = it;
+            if (s == $slot[weapon] && it.weapon_hands() > 1)
+            {
+                item_slots[$slot[off-hand]] = it;
+            }
         }
     }
     
@@ -3997,7 +4058,11 @@ boolean monster_has_zero_turn_cost(monster m)
         return true;
     if ($monsters[terrible mutant,slime blob,government bureaucrat,angry ghost,annoyed snake] contains m && get_property_int("_voteFreeFights") < 3)
     	return true;
+    if (lookupMonsters("void guy,void slab,void spider") contains m && get_property_int("_voidFreeFights") < 5)
+    	return true;
     if ($monsters[biker,burnout,jock,party girl,"plain" girl] contains m && get_property_int("_neverendingPartyFreeTurns") < 10)
+    	return true;
+    if (m == $monster[piranha plant]) //may or may not be location-specific?
     	return true;
     return false;
 }
@@ -4298,6 +4363,53 @@ boolean locationNextNCWillBeCartography(location l)
     }
     return true;
 }
+
+string getBasicItemDescription(item it)
+{
+	buffer out;
+	
+	string item_type = it.item_type();
+	
+	//if (item_type == "accessory") item_type = "acc";
+	if (item_type == "container") item_type = "back";
+	int weapon_hands = it.weapon_hands();
+	
+	if (weapon_hands != 0)
+	{
+        stat weapon_type = it.weapon_type();
+        
+		out.append(weapon_hands);
+        out.append("h ");
+        if (weapon_type == $stat[moxie])
+        	out.append("ranged ");
+        else
+        	out.append("melee ");
+	}
+	
+	out.append(item_type);
+	return out.to_string();
+}
+
+boolean monsterCanBeCopied(monster m)
+{
+	if (!m.copyable) return false;
+	if (m.boss) return false;
+	if ($monsters[writing desk,dirty thieving brigand] contains m) return false; //manual override list
+	return true;
+}
+
+boolean locationIsGoneFromTheGame(location l)
+{
+	if (l.parent == "Removed") return true;
+	
+	return false;
+}
+boolean locationIsEventSpecific(location l)
+{
+	if (l.zone == "Twitch" || l.zone == "Events") return true;
+	
+	return false;
+}
 //Allows fast querying of which effects have which numeric_modifier()s.
 
 //Modifiers are lower case.
@@ -4306,6 +4418,8 @@ static
 	boolean [effect][string] __modifiers_for_effect;
 	boolean [string][effect] __effects_for_modifiers;
 	boolean [effect] __effect_contains_non_constant_modifiers; //meaning, numeric_modifier() cannot be cached
+	boolean [effect][item] __items_for_effect;
+	boolean [effect][skill] __skills_for_effect;
 }
 void initialiseModifiers()
 {
@@ -4395,6 +4509,18 @@ void initialiseModifiers()
             //modifier_values[modifier_value] = true;
         }
         //return;
+	}
+	foreach it in $items[]
+	{
+		effect e = it.effect_modifier("effect");
+		if (e == $effect[none]) continue;
+		__items_for_effect[e][it] = true;
+	}
+	foreach s in $skills[]
+	{
+		effect e = s.to_effect();
+		if (e == $effect[none]) continue;
+		__skills_for_effect[e][s] = true;
 	}
 	/*print_html("Types:");
 	foreach type in modifier_types
@@ -4539,13 +4665,166 @@ QuestState QuestStateFromManualStep(string manual_value)
     state.QuestStateParseMafiaQuestPropertyValue(manual_value);
     return state;
 }
+
+buffer generateSelectionDropdown(string [int] descriptions, string [int] ids, string [int] replacement_images, string selection_div_id, string onchange_function_name)
+{
+	int text_limit = 50;
+	buffer out;
+	out.append("<select id=\"" + selection_div_id + "\" style=\"width:100%;\" onchange=\"" + onchange_function_name + "('" + selection_div_id + "');\">");
+	out.append("<option value=\"-1\"></option>");
+	foreach key in descriptions
+	{
+		out.append("<option value=\"");
+		//out.append(ids[key].replace_string("\"", "\\\""));
+		out.append(ids[key].entity_encode()); //replace_string("\"", "").
+		out.append("\"");
+		string replacement_image = replacement_images[key];
+		if (replacement_image != "")
+		{
+			out.append(" data-replacement-image=\"");
+			out.append(replacement_image);
+			//out.append("images/otherimages/witchywoman.gif");
+			out.append("\"");
+		}
+		out.append(">");
+		
+		string description = descriptions[key];
+		
+		if (description.length() >= text_limit)
+			description = description.substring(0, text_limit - 1) + "...";
+		out.append(description);
+		out.append("</option>");
+	}
+	out.append("</select>");
+	return out;
+}
+
+buffer generateButton(string text, string id, boolean make_table_cell, string command, string image)
+{
+	boolean use_divs = true;
+	buffer out;
+	
+	boolean inline_image_cells = false; //make_table_cell && image != "";
+	
+	if (make_table_cell && !use_divs)
+		out.append("<div style=\"display:table-cell;vertical-align:middle;\">");
+	if (use_divs)
+		out.append("<div");
+	else
+		out.append("<button");
+	out.append(" style=\"");
+	if (make_table_cell && !use_divs)
+		out.append("width:100%;");
+	if (make_table_cell && use_divs)
+		out.append("display:table-cell;");
+	else if (!make_table_cell)
+		out.append("display:inline-block;");
+	out.append("\" class=\"button\"");
+	if (id != "")
+	{
+		out.append(" id=\"");
+		out.append(id);
+		out.append("\"");
+	}
+	out.append(" onmouseup=\"buttonClicked(");
+	out.append("'");
+	out.append(id);
+	out.append("', '");
+	out.append(command);
+	out.append("', '");
+	out.append(my_hash());
+	out.append("'");
+	
+	out.append(");\"");
+	if (command != "")
+	{
+		out.append(" title=\"");
+		out.append(command.replace_string("\\", ""));
+		out.append("\"");
+	}
+	out.append(">");
+	
+	if (image != "")
+	{
+		//margin-left:auto;margin-right:auto;
+		if (!inline_image_cells)
+			out.append("<div style=\"display:table;\"><div style=\"display:table-row;\">");
+		out.append("<div style=\"display:table-cell;vertical-align:middle;\">");
+		out.append("<img src=\"images/" + image + "\" style=\"mix-blend-mode:multiply;\" width=30 height=30>");
+		out.append("</div><div style=\"display:table-cell;vertical-align:middle;padding-left:2px;\">");
+	}
+	out.append(text);
+	if (image != "")
+	{
+		out.append("</div>");
+		if (!inline_image_cells)
+			out.append("</div></div>");
+	}
+	if (use_divs)
+		out.append("</div>");
+	else
+		out.append("</button>");
+	if (make_table_cell && !use_divs)
+		out.append("</div>");
+	return out;
+}
+
+
+buffer generateButton(string text, string id, boolean make_table_cell, string command)
+{
+	return generateButton(text, id, make_table_cell, "", "");
+}
+
+buffer generateButton(string text, string id, boolean make_table_cell)
+{
+	return generateButton(text, id, make_table_cell, "");
+}
+
+Record DropdownGenerationEntry
+{
+	string left_text;
+	string [int] descriptions;
+	string [int] ids;
+	string [int] replacement_images;
+	string selection_div_id;
+	string button_div_id;
+	string button_text;
+};
+
+
+buffer dropdownGenerationGenerate(DropdownGenerationEntry [int] dropdowns)
+{
+	buffer out;
+	out.append("<div style=\"display:table;width:100%;\">");
+	
+	foreach key, dropdown in dropdowns
+	{
+		out.append("<div style=\"display:table-row\">");
+		
+		out.append("<div style=\"display:table-cell;\">");
+		out.append(dropdown.left_text);
+		out.append("</div>");
+		
+		out.append("<div style=\"display:table-cell;\">");
+		out.append(generateSelectionDropdown(dropdown.descriptions, dropdown.ids, dropdown.replacement_images, dropdown.selection_div_id, "genieSelectionChanged"));
+		out.append("</div>");
+		
+		out.append("<div style=\"display:table-cell;\">");
+		out.append(generateButton(dropdown.button_text, dropdown.button_div_id, false));
+		out.append("</div>");
+		
+		out.append("</div>");
+	}
+	out.append("</div>");
+	return out;
+}
 //Comment to allow file_to_map() to see this file:
 //Choice	override
 
 boolean [string] __numeric_modifier_names = $strings[Familiar Weight,Monster Level,Combat Rate,Initiative,Experience,Item Drop,Meat Drop,Damage Absorption,Damage Reduction,Cold Resistance,Hot Resistance,Sleaze Resistance,Spooky Resistance,Stench Resistance,Mana Cost,Moxie,Moxie Percent,Muscle,Muscle Percent,Mysticality,Mysticality Percent,Maximum HP,Maximum HP Percent,Maximum MP,Maximum MP Percent,Weapon Damage,Ranged Damage,Spell Damage,Spell Damage Percent,Cold Damage,Hot Damage,Sleaze Damage,Spooky Damage,Stench Damage,Cold Spell Damage,Hot Spell Damage,Sleaze Spell Damage,Spooky Spell Damage,Stench Spell Damage,Underwater Combat Rate,Fumble,HP Regen Min,HP Regen Max,MP Regen Min,MP Regen Max,Adventures,Familiar Weight Percent,Weapon Damage Percent,Ranged Damage Percent,Stackable Mana Cost,Hobo Power,Base Resting HP,Resting HP Percent,Bonus Resting HP,Base Resting MP,Resting MP Percent,Bonus Resting MP,Critical Hit Percent,PvP Fights,Volleyball,Sombrero,Leprechaun,Fairy,Meat Drop Penalty,Hidden Familiar Weight,Item Drop Penalty,Initiative Penalty,Food Drop,Booze Drop,Hat Drop,Weapon Drop,Offhand Drop,Shirt Drop,Pants Drop,Accessory Drop,Volleyball Effectiveness,Sombrero Effectiveness,Leprechaun Effectiveness,Fairy Effectiveness,Familiar Weight Cap,Slime Resistance,Slime Hates It,Spell Critical Percent,Muscle Experience,Mysticality Experience,Moxie Experience,Effect Duration,Candy Drop,DB Combat Damage,Sombrero Bonus,Familiar Experience,Sporadic Meat Drop,Sporadic Item Drop,Meat Bonus,Pickpocket Chance,Combat Mana Cost,Muscle Experience Percent,Mysticality Experience Percent,Moxie Experience Percent,Minstrel Level,Muscle Limit,Mysticality Limit,Moxie Limit,Song Duration,Prismatic Damage,Smithsness,Supercold Resistance,Reduce Enemy Defense,Pool Skill,Surgeonosity];
 
 
-boolean [monster] __genie_invalid_monsters = $monsters[ninja snowman assassin,modern zmobie,big swarm of ghuol whelps,giant swarm of ghuol whelps,swarm of ghuol whelps,dirty old lihc,ghostly pickle factory worker,mouthless murmur,Mrs. Freeze,Slime Tube monster,Xiblaxian political prisoner,snakefire in the grass,Spant soldier,BRICKO cathedral,BRICKO airship,giant amorphous blob,amorphous blob,"Blofeld",Thanksgolem,time-spinner prank,boneless blobghost,Source Agent,One Thousand Source Agents,giant rubber spider,skulldozer,your butt,Clara,Jick's butt,Brick Mulligan\, the Bartender,Trophyfish,Drunk cowpoke,Wannabe gunslinger,Surly gambler,Cow cultist,Hired gun,Camp cook,Skeletal gunslinger,Restless ghost,Buzzard,Mountain lion,Grizzled bear,Diamondback rattler,Coal snake,Frontwinder,Caugr,Pyrobove,Spidercow,Moomy,Jeff the Fancy Skeleton,Daisy the Unclean,Pecos Dave,Pharaoh Amoon-Ra Cowtep,Snake-Eyes Glenn,Former Sheriff Dan Driscoll,Unusual construct,Granny Hackleton,Villainous Minion,Villainous Henchperson,Villainous Villain,LOV Enforcer,LOV Engineer,LOV Equivocator,Abcrusher 4000&trade;,All-Hallow's Steve,Apathetic lizardman,Aquaconda,Baron von Ratsworth,Beast with X Ears,Beast with X Eyes,Bee swarm,Bee thoven,Beebee gunners,Beebee King,Beebee queue,Beelephant,Best Game Ever,Biclops,Black pudding,Bonerdagon,Book of Faces,Booty crab,BRICKO elephant,BRICKO gargantuchicken,BRICKO octopus,BRICKO oyster,BRICKO python,BRICKO turtle,BRICKO vacuum cleaner,Broodling seal,Brutus\, the toga-clad lout,Bugbear Captain,Bugbear robo-surgeon,Buzzerker,C.A.R.N.I.V.O.R.E. Operative,Candied Yam Golem,Canned goblin conspirator,Carbuncle Top,Carnivorous dill plant,Caveman Dan,Centurion of Sparky,Chatty coworker,Chester,Chief Electronic Overseer,Chocolate hare,Chocolate-cherry prairie dog,Cosmetics wraith,Count Drunkula,Count Drunkula (Hard Mode),crazy bastard,Croqueteer,Cyrus the Virus,Danglin' Chad,Deadly Hydra,Demon of New Wave,Disorganized files,Dr. Awkward,Drownedbeat,Drunken rat king,E.V.E.\, the robot zombie,Ed the Undying,Elp&iacute;zo & Crosybdis,Endless conference call,Enormous blob of gray goo,Escalatormaster&trade;,Essence of Interspecies Respect,Essence of Soy,Essence of Tofu,Evil spaghetti cult assassin,Extremely annoyed witch,Falls-From-Sky,Falls-From-Sky (Hard Mode),Family of kobolds,Father McGruber,Father Nikolai Ravonovich,Fear Man,Fearsome giant squid,Fearsome Wacken,Felonia\, Queen of the Spooky Gravy Fairies,Ferocious roc,Filthworm drone,Filthworm royal guard,Fire truck,Fnord the Unspeakable,Frank &quot;Skipper&quot; Dan\, the Accordion Lord,Frosty,Frozen Solid Snake,Full-length mirror,Georgepaul\, the Balldodger,ghost of Elizabeth Spookyraven,Ghost of Fernswarthy's Grandfather,Ghostly pickle factory worker,Giant bird-creature,Giant jungle python,Giant man-eating shark,Giant sandworm,Giant tardigrade,Gingerbread lawyer,Glass of Orange Juice,Goblin conspirator,Gorgolok\, the Demonic Hellseal,Great Wolf of the Air,Great Wolf of the Air (Hard Mode),Groar,Guajolote Cad&aacute;ver,Guard turtle,Gummi plesiosaur,Gurgle,Guy Made Of Bees,Hammered Yam Golem,Hank North\, Photojournalist,Heat seal,Heimandatz\, Nacho Golem,Hermetic seal,The Hermit,Hideous slide show,Hodgman\, The Hoboverlord,Holographic army,Hot bugbear,Hot ghost,Hot skeleton,Hot vampire,Hot werewolf,Hot zombie,Huge ghuol,Hunting seal,Ice cream truck,Inebriated Tofurkey,Jocko Homo,Johnringo\, the Netdragger,Knob Goblin King,Knott Slanding,Largish blob of gray goo,Larry of the Field of Signs,Larval filthworm,Legal alien,Legstrong&trade; stationary bicycle,Little blob of gray goo,Lord Spookyraven,Lumpy\, the Demonic Sauceblob,Malevolent Tofurkey,Mayor Ghost,Mayor Ghost (Hard Mode),Mimic,Moister oyster,Moneybee,Monty Basingstoke-Pratt\, IV,Mumblebee,Naughty Sorceress,Neil,Next-generation Frat Boy,Novia Cad&aacute;ver,Novio Cad&aacute;ver,Ol' Scratch,Oscus,your overflowing inbox,Padre Cad&aacute;ver,panicking Knott Yeti,Peanut,Peregrino Cad&aacute;ver,Persona Inocente Cad&aacute;ver,Plastered Can of Cranberry Sauce,Monstrous Boiler,Possessed Can of Cranberry Sauce,Procedurally-generated skeleton,Professor Jacking,Protector Spectre,Queen Bee,Queen filthworm,Rack of free weights,Rock Pop weasel,Rotten dolphin thief,sentient ATM,Your Shadow,Skelter Butleton\, the Butler Skeleton,Skulldozer,Slow Talkin' Elliot,Smut orc pervert,Snapdragon,Somebody else's butt,Somerset Lopez\, Demon Mariachi,Soused Stuffing Golem,Space beast matriarch,Space beast,Spaghetti Demon,Spawn of Wally,Spider conspirator,Spider-goblin conspirator,Spider-legged witch's hut,Spirit alarm clock,Stella\, the Demonic Turtle Poacher,Storm cow,Stuffing Golem,Tedious spreadsheet,The Big Wisniewski,Crimbomega,The Krampus,The Landscaper,The Man,The Nuge,The Server,The Sierpinski brothers,The Temporal Bandit,The Unkillable Skeleton,The Unkillable Skeleton (Hard Mode),Tiger-lily,Time-spinner prank,Tin can conspirator,Tin spider conspirator,Tomb rat king,Tome of Tropes,Totally Malicious 'Zine,Treadmill,Tio Cad&aacute;ver,Unearthed monstrosity,Unoptimized database,Vanya's Creature,Victor the Insult Comic Hellhound,Vine gar,War Frat Streaker,Wasp in a wig,Water cooler,White Bone Demon,Wu Tang the Betrayer,Wumpus,X Bottles of Beer on a Golem,X Stone Golem,X-dimensional horror,X-headed Hydra,Xiblaxian political prisoner,Your Brain,Zim Merman,Zombie Homeowners' Association,Zombie Homeowners' Association (Hard Mode),Zombo,7-Foot Dwarf (Moiling),7-Foot Dwarf (Royale),<s>Killer</s> Festive Arc-Welding Elfbot,<s>Killer</s> Festive Decal-Applying Elfbot,<s>Killer</s> Festive Laser-Calibrating Elfbot,<s>Killer</s> Festive Weapons-Assembly Elfbot,Underworld Tree,Accountant-Barbarian,Acoustic electric eel,Alien,Alien queen,alien UFO,Aquabat,Aquagoblin,Auqadargon,Big Wisnaqua,Boss Bat,Boss Bat?,Dad Sea Monkee,Donerbagon,Dr. Aquard,Ed the Undying (1),Ed the Undying (2),Ed the Undying (3),Ed the Undying (4),Ed the Undying (5),Ed the Undying (6),Ed the Undying (7),gingerbread vigilante,Gorgolok\, the Infernal Seal (Inner Sanctum),Gorgolok\, the Infernal Seal (The Nemesis' Lair),Gorgolok\, the Infernal Seal (Volcanic Cave),hulking bridge troll,Lord Soggyraven,Lumpy\, the Sinister Sauceblob (Inner Sanctum),Lumpy\, the Sinister Sauceblob (The Nemesis' Lair),Lumpy\, the Sinister Sauceblob (Volcanic Cave),Mammon the Elephant,Naughty Sorceress (2),Naughty Sorceress (3),new Knob Goblin King,Protector Spurt,Shub-Jigguwatt\, Elder God of Violence,Somerset Lopez\, Dread Mariachi (Inner Sanctum),Somerset Lopez\, Dread Mariachi (The Nemesis' Lair),Somerset Lopez\, Dread Mariachi (Volcanic Cave),Spaghetti Elemental (Inner Sanctum),Spaghetti Elemental (The Nemesis' Lair),Spaghetti Elemental (Volcanic Cave),Spirit of New Wave (Inner Sanctum),Spirit of New Wave (The Nemesis' Lair),Spirit of New Wave (Volcanic Cave),Stella\, the Turtle Poacher (Inner Sanctum),Stella\, the Turtle Poacher (The Nemesis' Lair),Stella\, the Turtle Poacher (Volcanic Cave),The Aquaman,The Avatar of Sneaky Pete,The Bat in the Spats,The Clownlord Beelzebozo,The Large-Bellied Snitch,The Rain King,The Silent Nightmare,The Terrible Pinch,The Thing with No Name,The Thorax,Thug 1 and Thug 2,Yog-Urt\, Elder Goddess of Hatred,You the Adventurer,Your winged yeti,The Abominable Fudgeman,The Author,Kudzu,Mansquito,Miss Graves,The Plumber,The Mad Libber,Doc Clock,Mr. Burns,The Inquisitor,ancient protector spirit (The Hidden Apartment Building),ancient protector spirit (The Hidden Bowling Alley),ancient protector spirit (The Hidden Hospital),ancient protector spirit (The Hidden Office Building),Argarggagarg the Dire Hellseal,Ringogeorge\, the Bladeswitcher,Ron "The Weasel" Copperhead,Scott the Miner,Seannery the Conman,The Avatar of Boris,The Avatar of Jarlsberg,The Barrelmech of Diogenes,The Beefhemoth,The Colollilossus,The Cray-Kin,the Crimborg,the darkness (blind),The Emperor,the former owner of the Skeleton Store,The Frattlesnake,The Free Man,The Fudge Wizard,The ghost of Ebenoozer Screege,The ghost of Jim Unfortunato,The ghost of Lord Montague Spookyraven,the ghost of Monsieur Baguelle,the ghost of Oily McBindle,the ghost of Phil Bunion,The ghost of Richard Cockingham,The ghost of Sam McGee,The ghost of Vanillica "Trashblossom" Gorton,The ghost of Waldo the Carpathian,the gunk,The Headless Horseman,The Icewoman,The Jokester,The Lavalier,The Luter,The Mariachi With No Name,The Master of Thieves,The Mastermind,the most embarrassing moment in your entire life,the realization that everyone you love will die someday,The Sagittarian,The Snake With Like Ten Heads,The Unknown Accordion Thief,The Unknown Disco Bandit,The Unknown Pastamancer,The Unknown Sauceror,The Unknown Seal Clubber,The Unknown Turtle Tamer,The Whole Kingdom,Yakisoba the Executioner,the abstract concept of poverty,ancient protector spirit, ancient protector spirit (obsolete),Angry Space Marine,Norville Rogers,Norville Rogers,Peacannon,Herman East\, Relivinator,Angry Space Marine,Deputy Nick Soames & Earl,Charity the Zombie Hunter,Special Agent Wallace Burke Corrigan,Rag-tag band of survivors,Wesley J. "Wes" Campbell,Zombie-huntin' feller,Burning Snake of Fire,CDMoyer's butt,HotStuff's butt,Mr Skullhead's butt,Multi Czar's butt,Don Crimbo,intelligent alien,Kleptobrainiac,LOLmec,mayonnaise wasp,Cheetahman,Microwave Magus,Kung-Fu Hustler,Tasmanian Dervish,Macho Man,Iron Chef,Entire Shoplifter,Mr. Loathing,Metaphysical Gastronomist,Kleptobrainiac,Savage Beatnik,Creamweaver,Smooth Criminal,Fire Fighter,Cereal Arsonist,Burnglar,Grease Trapper,Ham Shaman,Porkpocket,Leonard,Ghostpuncher,Plague Chef,Batburglar,Arthur Frankenstein,Snowbrawler,Ice Cream Conjurer,Iceberglar,Granola Barbarian,Cheese Wizard,Assassin,Odorous Humongous,queen bee (Spelunky),small hostile animal,hostile plant,hostile intelligent alien,hostile plant,large hostile plant,exotic hostile plant,small hostile animal,large hostile animal,exotic hostile animal,Spant drone,Murderbot drone,Murderbot soldier,hostile intelligent alien,bat,cobra,snake,spider,bee,scorpion,skeleton,tikiman,caveman,yeti,crocodile man,cultist,magma man,mummy,devil,vampire,cobra,snake,spider,[1732]spider queen,[2080]spider queen,skeleton,vampire,bee,mummy,Bananubis,Yomama,common criminal,uncommon criminal,rare criminal,low-level mook,vicious plant creature,vine-controlled botanist,low-level mook,giant leech,giant mosquito,low-level mook,lovestruck goth dude,walking skeleton,mid-level mook,liquid plumber,plumber's helper,mid-level mook,former inmate,former guard,mid-level mook,very [adjective] henchwoman,very [adjective] henchman,high-level mook,time bandit,clockwork man,high-level mook,serial arsonist,burner,high-level mook,inquisitee,trivia researcher,screambat,Mother Slime,anesthesiologist bugbear,cheerless mime scientist,cheerless mime soldier,Elf Hobo,outlaw leader,Richard X,Uncle Hobo,wall of bones,wall of meat,wall of skin,Principal Mooney,shopkeeper,topiary golem,silent scream,Your Lack of Reflection,Clancy,[2050]Jerry Bradford,[2051]Jerry Bradford,[2052]Jerry Bradford,[2053]Jerry Bradford,[2054]Jerry Bradford,[2055]Jerry Bradford,[2056]Jerry Bradford,[2057]Jerry Bradford,[2058]Jerry Bradford,evil spaghetti cult priest,evil spaghetti cultist,evil trumpet-playing mariachi,evil vihuela-playing mariachi,haunted soup tureen,infernal seal larva,infernal seal spawn,pernicious puddle of pesto,psychedelic fur,slithering hollandaise glob,talking head,vengeful turtle spectre,b&eacute;arnaise zombie];
+boolean [monster] __genie_invalid_monsters = $monsters[ninja snowman assassin,modern zmobie,big swarm of ghuol whelps,giant swarm of ghuol whelps,swarm of ghuol whelps,dirty old lihc,ghostly pickle factory worker,mouthless murmur,Mrs. Freeze,Slime Tube monster,Xiblaxian political prisoner,snakefire in the grassfire,Spant soldier,BRICKO cathedral,BRICKO airship,giant amorphous blob,amorphous blob,"Blofeld",Thanksgolem,time-spinner prank,boneless blobghost,Source Agent,One Thousand Source Agents,giant rubber spider,skulldozer,your butt,Clara,Jick's butt,Brick Mulligan\, the Bartender,Trophyfish,Drunk cowpoke,Wannabe gunslinger,Surly gambler,Cow cultist,Hired gun,Camp cook,Skeletal gunslinger,Restless ghost,Buzzard,Mountain lion,Grizzled bear,Diamondback rattler,Coal snake,Frontwinder,Caugr,Pyrobove,Spidercow,Moomy,Jeff the Fancy Skeleton,Daisy the Unclean,Pecos Dave,Pharaoh Amoon-Ra Cowtep,Snake-Eyes Glenn,Former Sheriff Dan Driscoll,Unusual construct,Granny Hackleton,Villainous Minion,Villainous Henchperson,Villainous Villain,LOV Enforcer,LOV Engineer,LOV Equivocator,Abcrusher 4000&trade;,All-Hallow's Steve,Apathetic lizardman,Aquaconda,Baron von Ratsworth,Beast with X Ears,Beast with X Eyes,Bee swarm,Bee thoven,Beebee gunners,Beebee King,Beebee queue,Beelephant,Best Game Ever,Biclops,Black pudding,Bonerdagon,Book of Faces,Booty crab,BRICKO elephant,BRICKO gargantuchicken,BRICKO octopus,BRICKO oyster,BRICKO python,BRICKO turtle,BRICKO vacuum cleaner,Broodling seal,Brutus\, the toga-clad lout,Bugbear Captain,Bugbear robo-surgeon,Buzzerker,C.A.R.N.I.V.O.R.E. Operative,Candied Yam Golem,Canned goblin conspirator,Carbuncle Top,Carnivorous dill plant,Caveman Dan,Centurion of Sparky,Chatty coworker,Chester,Chief Electronic Overseer,Chocolate hare,Chocolate-cherry prairie dog,Cosmetics wraith,Count Drunkula,Count Drunkula (Hard Mode),crazy bastard,Croqueteer,Cyrus the Virus,Danglin' Chad,Deadly Hydra,Demon of New Wave,Disorganized files,Dr. Awkward,Drownedbeat,Drunken rat king,E.V.E.\, the robot zombie,Ed the Undying,Elp&iacute;zo & Crosybdis,Endless conference call,Enormous blob of gray goo,Escalatormaster&trade;,Essence of Interspecies Respect,Essence of Soy,Essence of Tofu,Evil spaghetti cult assassin,Extremely annoyed witch,Falls-From-Sky,Falls-From-Sky (Hard Mode),Family of kobolds,Father McGruber,Father Nikolai Ravonovich,Fear Man,Fearsome giant squid,Fearsome Wacken,Felonia\, Queen of the Spooky Gravy Fairies,Ferocious roc,Filthworm drone,Filthworm royal guard,Fire truck,Fnord the Unspeakable,Frank &quot;Skipper&quot; Dan\, the Accordion Lord,Frosty,Frozen Solid Snake,Full-length mirror,Georgepaul\, the Balldodger,ghost of Elizabeth Spookyraven,Ghost of Fernswarthy's Grandfather,Ghostly pickle factory worker,Giant bird-creature,Giant jungle python,Giant man-eating shark,Giant sandworm,Giant tardigrade,Gingerbread lawyer,Glass of Orange Juice,Goblin conspirator,Gorgolok\, the Demonic Hellseal,Great Wolf of the Air,Great Wolf of the Air (Hard Mode),Groar,Guajolote Cad&aacute;ver,Guard turtle,Gummi plesiosaur,Gurgle,Guy Made Of Bees,Hammered Yam Golem,Hank North\, Photojournalist,Heat seal,Heimandatz\, Nacho Golem,Hermetic seal,The Hermit,Hideous slide show,Hodgman\, The Hoboverlord,Holographic army,Hot bugbear,Hot ghost,Hot skeleton,Hot vampire,Hot werewolf,Hot zombie,Huge ghuol,Hunting seal,Ice cream truck,Inebriated Tofurkey,Jocko Homo,Johnringo\, the Netdragger,Knob Goblin King,Knott Slanding,Largish blob of gray goo,Larry of the Field of Signs,Larval filthworm,Legal alien,Legstrong&trade; stationary bicycle,Little blob of gray goo,Lord Spookyraven,Lumpy\, the Demonic Sauceblob,Malevolent Tofurkey,Mayor Ghost,Mayor Ghost (Hard Mode),Mimic,Moister oyster,Moneybee,Monty Basingstoke-Pratt\, IV,Mumblebee,Naughty Sorceress,Neil,Next-generation Frat Boy,Novia Cad&aacute;ver,Novio Cad&aacute;ver,Ol' Scratch,Oscus,your overflowing inbox,Padre Cad&aacute;ver,panicking Knott Yeti,Peanut,Peregrino Cad&aacute;ver,Persona Inocente Cad&aacute;ver,Plastered Can of Cranberry Sauce,Monstrous Boiler,Possessed Can of Cranberry Sauce,Procedurally-generated skeleton,Professor Jacking,Protector Spectre,Queen Bee,Queen filthworm,Rack of free weights,Rock Pop weasel,Rotten dolphin thief,sentient ATM,Your Shadow,Skelter Butleton\, the Butler Skeleton,Skulldozer,Slow Talkin' Elliot,Smut orc pervert,Snapdragon,Somebody else's butt,Somerset Lopez\, Demon Mariachi,Soused Stuffing Golem,Space beast matriarch,Space beast,Spaghetti Demon,Spawn of Wally,Spider conspirator,Spider-goblin conspirator,Spider-legged witch's hut,Spirit alarm clock,Stella\, the Demonic Turtle Poacher,Storm cow,Stuffing Golem,Tedious spreadsheet,The Big Wisniewski,Crimbomega,The Krampus,The Landscaper,The Man,The Nuge,The Server,The Sierpinski brothers,The Temporal Bandit,The Unkillable Skeleton,The Unkillable Skeleton (Hard Mode),Tiger-lily,Time-spinner prank,Tin can conspirator,Tin spider conspirator,Tomb rat king,Tome of Tropes,Totally Malicious 'Zine,Treadmill,T&iacute;o Cad&aacute;ver,Unearthed monstrosity,Unoptimized database,Vanya's Creature,Victor the Insult Comic Hellhound,Vine gar,War Frat Streaker,Wasp in a wig,Water cooler,White Bone Demon,Wu Tang the Betrayer,Wumpus,X Bottles of Beer on a Golem,X Stone Golem,X-dimensional horror,X-headed Hydra,Xiblaxian political prisoner,Your Brain,Zim Merman,Zombie Homeowners' Association,Zombie Homeowners' Association (Hard Mode),Zombo,7-Foot Dwarf (Moiling),7-Foot Dwarf (Royale),<s>Killer</s> Festive Arc-Welding Elfbot,<s>Killer</s> Festive Decal-Applying Elfbot,<s>Killer</s> Festive Laser-Calibrating Elfbot,<s>Killer</s> Festive Weapons-Assembly Elfbot,Underworld Tree,Accountant-Barbarian,Acoustic electric eel,Alien,Alien queen,alien UFO,Aquabat,Aquagoblin,Auqadargon,Big Wisnaqua,Boss Bat,Boss Bat?,Dad Sea Monkee,Donerbagon,Dr. Aquard,Ed the Undying (1),Ed the Undying (2),Ed the Undying (3),Ed the Undying (4),Ed the Undying (5),Ed the Undying (6),Ed the Undying (7),gingerbread vigilante,Gorgolok\, the Infernal Seal (Inner Sanctum),Gorgolok\, the Infernal Seal (The Nemesis' Lair),Gorgolok\, the Infernal Seal (Volcanic Cave),hulking bridge troll,Lord Soggyraven,Lumpy\, the Sinister Sauceblob (Inner Sanctum),Lumpy\, the Sinister Sauceblob (The Nemesis' Lair),Lumpy\, the Sinister Sauceblob (Volcanic Cave),Mammon the Elephant,Naughty Sorceress (2),Naughty Sorceress (3),new Knob Goblin King,Protector Spurt,Shub-Jigguwatt\, Elder God of Violence,Somerset Lopez\, Dread Mariachi (Inner Sanctum),Somerset Lopez\, Dread Mariachi (The Nemesis' Lair),Somerset Lopez\, Dread Mariachi (Volcanic Cave),Spaghetti Elemental (Inner Sanctum),Spaghetti Elemental (The Nemesis' Lair),Spaghetti Elemental (Volcanic Cave),Spirit of New Wave (Inner Sanctum),Spirit of New Wave (The Nemesis' Lair),Spirit of New Wave (Volcanic Cave),Stella\, the Turtle Poacher (Inner Sanctum),Stella\, the Turtle Poacher (The Nemesis' Lair),Stella\, the Turtle Poacher (Volcanic Cave),The Aquaman,The Avatar of Sneaky Pete,The Bat in the Spats,The Clownlord Beelzebozo,The Large-Bellied Snitch,The Rain King,The Silent Nightmare,The Terrible Pinch,The Thing with No Name,The Thorax,Thug 1 and Thug 2,Yog-Urt\, Elder Goddess of Hatred,You the Adventurer,Your winged yeti,The Abominable Fudgeman,The Author,Kudzu,Mansquito,Miss Graves,The Plumber,The Mad Libber,Doc Clock,Mr. Burns,The Inquisitor,ancient protector spirit (The Hidden Apartment Building),ancient protector spirit (The Hidden Bowling Alley),ancient protector spirit (The Hidden Hospital),ancient protector spirit (The Hidden Office Building),Argarggagarg the Dire Hellseal,Ringogeorge\, the Bladeswitcher,Ron "The Weasel" Copperhead,Scott the Miner,Seannery the Conman,The Avatar of Boris,The Avatar of Jarlsberg,The Barrelmech of Diogenes,The Beefhemoth,The Colollilossus,The Cray-Kin,the Crimborg,the darkness (blind),The Emperor,the former owner of the Skeleton Store,The Frattlesnake,The Free Man,The Fudge Wizard,The ghost of Ebenoozer Screege,The ghost of Jim Unfortunato,The ghost of Lord Montague Spookyraven,the ghost of Monsieur Baguelle,the ghost of Oily McBindle,the ghost of Phil Bunion,The ghost of Richard Cockingham,The ghost of Sam McGee,The ghost of Vanillica "Trashblossom" Gorton,The ghost of Waldo the Carpathian,the gunk,The Headless Horseman,The Icewoman,The Jokester,The Lavalier,The Luter,The Mariachi With No Name,The Master of Thieves,The Mastermind,the most embarrassing moment in your entire life,the realization that everyone you love will die someday,The Sagittarian,The Snake With Like Ten Heads,The Unknown Accordion Thief,The Unknown Disco Bandit,The Unknown Pastamancer,The Unknown Sauceror,The Unknown Seal Clubber,The Unknown Turtle Tamer,The Whole Kingdom,Yakisoba the Executioner,the abstract concept of poverty,ancient protector spirit, ancient protector spirit (obsolete),Angry Space Marine,Norville Rogers,Norville Rogers,Peacannon,Herman East\, Relivinator,Angry Space Marine,Deputy Nick Soames & Earl,Charity the Zombie Hunter,Special Agent Wallace Burke Corrigan,Rag-tag band of survivors,Wesley J. "Wes" Campbell,Zombie-huntin' feller,Burning Snake of Fire,CDMoyer's butt,HotStuff's butt,Mr Skullhead's butt,Multi Czar's butt,Don Crimbo,intelligent alien,Kleptobrainiac,LOLmec,mayonnaise wasp,Cheetahman,Microwave Magus,Kung-Fu Hustler,Tasmanian Dervish,Macho Man,Iron Chef,Entire Shoplifter,Mr. Loathing,Metaphysical Gastronomist,Kleptobrainiac,Savage Beatnik,Creamweaver,Smooth Criminal,Fire Fighter,Cereal Arsonist,Burnglar,Grease Trapper,Ham Shaman,Porkpocket,Leonard,Ghostpuncher,Plague Chef,Batburglar,Arthur Frankenstein,Snowbrawler,Ice Cream Conjurer,Iceberglar,Granola Barbarian,Cheese Wizard,Assassin,Odorous Humongous,queen bee (Spelunky),small hostile animal,hostile plant,hostile intelligent alien,hostile plant,large hostile plant,exotic hostile plant,small hostile animal,large hostile animal,exotic hostile animal,Spant drone,Murderbot drone,Murderbot soldier,hostile intelligent alien,bat,cobra,snake,spider,bee,scorpion,skeleton,tikiman,caveman,yeti,crocodile man,cultist,magma man,mummy,devil,vampire,cobra,snake,spider,[1732]spider queen,[2080]spider queen,skeleton,vampire,bee,mummy,Bananubis,Yomama,common criminal,uncommon criminal,rare criminal,low-level mook,vicious plant creature,vine-controlled botanist,low-level mook,giant leech,giant mosquito,low-level mook,lovestruck goth dude,walking skeleton,mid-level mook,liquid plumber,plumber's helper,mid-level mook,former inmate,former guard,mid-level mook,very [adjective] henchwoman,very [adjective] henchman,high-level mook,time bandit,clockwork man,high-level mook,serial arsonist,burner,high-level mook,inquisitee,trivia researcher,screambat,Mother Slime,anesthesiologist bugbear,cheerless mime scientist,cheerless mime soldier,Elf Hobo,outlaw leader,Richard X,Uncle Hobo,wall of bones,wall of meat,wall of skin,Principal Mooney,shopkeeper,topiary golem,silent scream,Your Lack of Reflection,Clancy,[2050]Jerry Bradford,[2051]Jerry Bradford,[2052]Jerry Bradford,[2053]Jerry Bradford,[2054]Jerry Bradford,[2055]Jerry Bradford,[2056]Jerry Bradford,[2057]Jerry Bradford,[2058]Jerry Bradford,evil spaghetti cult priest,evil spaghetti cultist,evil trumpet-playing mariachi,evil vihuela-playing mariachi,haunted soup tureen,infernal seal larva,infernal seal spawn,pernicious puddle of pesto,psychedelic fur,slithering hollandaise glob,talking head,vengeful turtle spectre,b&eacute;arnaise zombie];
 
 
 //Ideally we would use the nohookah attribute, except "nohookah" and "wishable" do not always align; as an example, both Very Attractive and Barely Visible are wishable, but are marked nohookah. I think there might be another flag necessary?
@@ -4554,7 +4833,7 @@ boolean [effect] __genie_invalid_effects = $effects[jukebox hero,Juicy Boost,Met
 //Works: Driving Wastefully, Driving Stealthily, rest untested
 
 boolean [string] __genie_invalid_monster_strings = $strings[Jerry Bradford\, Pokéfam World Champion];
-boolean [string] __genie_invalid_effect_strings = $strings[Double Negavision, Gettin' the Goods,Moose-Warmed Belly,Crimbeau'd,Bats Form,Heated Up,Strongly Motivated,Wolf Form,Yeg's Glory,Yeg's Keeping,Yeg's Power,Rictus of Yeg,Sigils of Yeg,Breath of Yeg,You Pray To Yeg Your Soul To Keep,Big Smile of the Blender,Big Smile of the Marmot,,Big Smile of the Mongoose,Big Smile of the Opossum,Big Smile of the Packrat,Big Smile of the Platypus,Big Smile of the Wallaby,Big Smile of the Vole,Big Smile of the Wombat,The Spirit of Taking,That's Just Cloud-Talk\, Man,Misty Form,Bat-Adjacent Form,Hot-Headed,Cold as Nice,A Brush with Grossness,Does It Have a Skull In There??,Lack of Body-Building,We're All Made of Starfish,Pomp & Circumsands,Resting Beach Face,Do I Know You From Somewhere?,You Learned Something Maybe!,Negavision,Boxing Day Breakfast,Boxing Day Drinking,Boxing Day Glow,She Ate Too Much Candy,Wolfish Form,Oiled\, Slick,Your Fifteen Minutes,Mind Vision,Impeccable Coiffure,Bone Springs,Power\, Man,Spa Day!,Iced and Tainted,Liquor-ish,Aerated,Wrought Nerves,A Girl Named Sue,Meet the Meat,Gunther Than Thou,Everybody Calls Him Gorgon,They Call Him Shifty Because...,Citronella Armpits,Baited Hook,A Real Head for Fish,High-Test Fishing Line,Juiced and Loose,Magicianship,Double-Barreled,Ancient Fortitude,Kicked in the Sinuses,Wisdom of Thoth,Prayer of Seshat,Power of Heka,La Oscuridad Adentro,Sangre Brillante,Unbarking Dogs,Sugar-Frosted Pet Guts,Zero Energy,Glasshole,All Revved Up,Pompadour,Fauxhawk,It's Not Even Funny,Merry Smithsness,Smithsness Presence,Smithsness Dinner,Smithsness Cheer,Simmering,Soulerskates,Reassured,Arched Eyebrow of the Archmage,Wizard Squint,Bloody Potato Bits,Slinking Noodle Glob,Whispering Strands,Macaroni Coating,Penne Fedora,Spice Haze,Icy Glare,Racing!,Invisible (20 Minutes Ago),Confidence!,Watch Out!,Blessing of the War Snapper,Grand Blessing of the War Snapper,Glorious Blessing of the War Snapper,Blessing of She-Who-Was,Grand Blessing of She-Who-Was,Glorious Blessing of She-Who-Was,Blessing of the Storm Tortoise,Grand Blessing of the Storm Tortoise,Glorious Blessing of the Storm Tortoise,Fitter\, Bitter,Digitalis\, Dig It,Hare-Brained,Flyin' Drunk,Disco Smirk,Disco Leer,Suspicious Gaze,Knowing Smile,Spirit Souvenirs,Patient Smile,Spirit Schooled,My Breakfast With Andrea,The Champion's Breakfast,Hoppyness,Net Gain,Blade Rolling,Jamming with the Jocks,Nerd is the Word,Greaser Lightnin',Well-Rested,Scowl of the Auk,Fightin' Drunk,Thinkin' Drunk,Jokin' Drunk,]; //' because errors on older versions
+boolean [string] __genie_invalid_effect_strings = $strings[Double Negavision, Gettin' the Goods,Moose-Warmed Belly,Crimbeau'd,Bats Form,Heated Up,Strongly Motivated,Wolf Form,Yeg's Glory,Yeg's Keeping,Yeg's Power,Rictus of Yeg,Sigils of Yeg,Breath of Yeg,You Pray To Yeg Your Soul To Keep,Big Smile of the Blender,Big Smile of the Marmot,,Big Smile of the Mongoose,Big Smile of the Opossum,Big Smile of the Packrat,Big Smile of the Platypus,Big Smile of the Wallaby,Big Smile of the Vole,Big Smile of the Wombat,The Spirit of Taking,That's Just Cloud-Talk\, Man,Misty Form,Bat-Adjacent Form,Hot-Headed,Cold as Nice,A Brush with Grossness,Does It Have a Skull In There??,Lack of Body-Building,We're All Made of Starfish,Pomp & Circumsands,Resting Beach Face,Do I Know You From Somewhere?,You Learned Something Maybe!,Negavision,Boxing Day Breakfast,Boxing Day Drinking,Boxing Day Glow,She Ate Too Much Candy,Wolfish Form,Oiled\, Slick,Your Fifteen Minutes,Mind Vision,Impeccable Coiffure,Bone Springs,Power\, Man,Spa Day!,Iced and Tainted,Liquor-ish,Aerated,Wrought Nerves,A Girl Named Sue,Meet the Meat,Gunther Than Thou,Everybody Calls Him Gorgon,They Call Him Shifty Because...,Citronella Armpits,Baited Hook,A Real Head for Fish,High-Test Fishing Line,Juiced and Loose,Magicianship,Double-Barreled,Ancient Fortitude,Kicked in the Sinuses,Wisdom of Thoth,Prayer of Seshat,Power of Heka,La Oscuridad Adentro,Sangre Brillante,Unbarking Dogs,Sugar-Frosted Pet Guts,Zero Energy,Glasshole,All Revved Up,Pompadour,Fauxhawk,It's Not Even Funny,Merry Smithsness,Smithsness Presence,Smithsness Dinner,Smithsness Cheer,Simmering,Soulerskates,Reassured,Arched Eyebrow of the Archmage,Wizard Squint,Bloody Potato Bits,Slinking Noodle Glob,Whispering Strands,Macaroni Coating,Penne Fedora,Spice Haze,Icy Glare,Racing!,Invisible (20 Minutes Ago),Confidence!,Watch Out!,Blessing of the War Snapper,Grand Blessing of the War Snapper,Glorious Blessing of the War Snapper,Blessing of She-Who-Was,Grand Blessing of She-Who-Was,Glorious Blessing of She-Who-Was,Blessing of the Storm Tortoise,Grand Blessing of the Storm Tortoise,Glorious Blessing of the Storm Tortoise,Fitter\, Bitter,Digitalis\, Dig It,Hare-Brained,Flyin' Drunk,Disco Smirk,Disco Leer,Suspicious Gaze,Knowing Smile,Spirit Souvenirs,Patient Smile,Spirit Schooled,My Breakfast With Andrea,The Champion's Breakfast,Hoppyness,Net Gain,Blade Rolling,Jamming with the Jocks,Nerd is the Word,Greaser Lightnin',Well-Rested,Scowl of the Auk,Fightin' Drunk,Thinkin' Drunk,Jokin' Drunk,It Went Through All Right,Ready to Roll,Grand Theft Candy,]; //' because errors on older versions
 
 
 int bestModForTableCount(int count)
@@ -4625,8 +4904,6 @@ monster [int] genieGenerateValidMonsterList()
 		early_monster_order.listAppend($monster[Camel's Toe]); //'
 		if (QuestState("questL08Trapper").mafia_internal_step < 3 && get_property_item("trapperOre").available_amount() < 3)
 			early_monster_order.listAppend($monster[Mountain Man]);
-		if ($item[talisman o' namsilat].available_amount() == 0) //'
-			early_monster_order.listAppend($monster[gaudy pirate]);
 		if (get_property_int("desertExploration") < 100 && $item[drum machine].available_amount() == 0) //FIXME the exact test is way more complicated
 			early_monster_order.listAppend($monster[blur]);
 		if (!have_outfit_components("Frat Warrior Fatigues") && !QuestState("questL12War").finished)
@@ -4634,8 +4911,6 @@ monster [int] genieGenerateValidMonsterList()
 		if (QuestState("questL12War").mafia_internal_step == 2)
 		{
 			early_monster_order.listAppend($monster[Green Ops Soldier]);
-			if (get_property("sidequestNunsCompleted") == "none")
-				early_monster_order.listAppend($monster[dirty thieving brigand]);
 		}
 		if ($items[antique machete,Machetito,Muculent machete,Papier-m&acirc;ch&eacute;te].available_amount() == 0) //FIXME test hidden properties
 			early_monster_order.listAppend($monster[forest spirit]);
@@ -4796,116 +5071,7 @@ effect [int] genieGenerateValidAvatarList()
 	return out;
 }
 
-buffer generateSelectionDropdown(string [int] descriptions, string [int] ids, string [int] replacement_images, string selection_div_id)
-{
-	int text_limit = 50;
-	buffer out;
-	out.append("<select id=\"" + selection_div_id + "\" style=\"width:100%;\" onchange=\"genieSelectionChanged('" + selection_div_id + "');\">");
-	out.append("<option value=\"-1\"></option>");
-	foreach key in descriptions
-	{
-		out.append("<option value=\"");
-		//out.append(ids[key].replace_string("\"", "\\\""));
-		out.append(ids[key].entity_encode()); //replace_string("\"", "").
-		out.append("\"");
-		string replacement_image = replacement_images[key];
-		if (replacement_image != "")
-		{
-			out.append(" data-replacement-image=\"");
-			out.append(replacement_image);
-			//out.append("images/otherimages/witchywoman.gif");
-			out.append("\"");
-		}
-		out.append(">");
-		
-		string description = descriptions[key];
-		
-		if (description.length() >= text_limit)
-			description = description.substring(0, text_limit - 1) + "...";
-		out.append(description);
-		out.append("</option>");
-	}
-	out.append("</select>");
-	return out;
-}
 
-buffer generateButton(string text, string id, boolean make_table_cell, string command, string image)
-{
-	boolean use_divs = true;
-	buffer out;
-	
-	boolean inline_image_cells = false; //make_table_cell && image != "";
-	
-	if (make_table_cell && !use_divs)
-		out.append("<div style=\"display:table-cell;vertical-align:middle;\">");
-	if (use_divs)
-		out.append("<div");
-	else
-		out.append("<button");
-	out.append(" style=\"");
-	if (make_table_cell && !use_divs)
-		out.append("width:100%;");
-	if (make_table_cell && use_divs)
-		out.append("display:table-cell;");
-	else if (!make_table_cell)
-		out.append("display:inline-block;");
-	out.append("\" class=\"button\"");
-	if (id != "")
-	{
-		out.append(" id=\"");
-		out.append(id);
-		out.append("\"");
-	}
-	out.append(" onmouseup=\"genieButtonClicked(");
-	out.append("'");
-	out.append(id);
-	out.append("', '");
-	out.append(command);
-	out.append("', '");
-	out.append(my_hash());
-	out.append("'");
-	
-	out.append(");\"");
-	if (command != "")
-	{
-		out.append(" title=\"");
-		out.append(command.replace_string("\\", ""));
-		out.append("\"");
-	}
-	out.append(">");
-	
-	if (image != "")
-	{
-		//margin-left:auto;margin-right:auto;
-		if (!inline_image_cells)
-			out.append("<div style=\"display:table;\"><div style=\"display:table-row;\">");
-		out.append("<div style=\"display:table-cell;vertical-align:middle;\">");
-		out.append("<img src=\"images/" + image + "\" style=\"mix-blend-mode:multiply;\" width=30 height=30>");
-		out.append("</div><div style=\"display:table-cell;vertical-align:middle;padding-left:2px;\">");
-	}
-	out.append(text);
-	if (image != "")
-	{
-		out.append("</div>");
-		if (!inline_image_cells)
-			out.append("</div></div>");
-	}
-	if (use_divs)
-		out.append("</div>");
-	else
-		out.append("</button>");
-	if (make_table_cell && !use_divs)
-		out.append("</div>");
-	return out;
-}
-buffer generateButton(string text, string id, boolean make_table_cell, string command)
-{
-	return generateButton(text, id, make_table_cell, "", "");
-}
-buffer generateButton(string text, string id, boolean make_table_cell)
-{
-	return generateButton(text, id, make_table_cell, "");
-}
 
 
 string genericiseImageString(string image)
@@ -4954,10 +5120,10 @@ buffer genieGenerateEffectDescription(effect e)
 	buffer out;
 	out.append(e);
 	boolean first = true;
-	//foreach modifier in __numeric_modifier_names
-	foreach modifier in __modifiers_for_effect[e]
+	//foreach modifier_name in __numeric_modifier_names
+	foreach modifier_name in __modifiers_for_effect[e]
 	{
-		float v = e.numeric_modifier(modifier);
+		float v = e.numeric_modifier(modifier_name);
 		if (v == 0.0) continue;
 		if (first)
 		{
@@ -4971,14 +5137,14 @@ buffer genieGenerateEffectDescription(effect e)
 		if (v > 0)
 			out.append("+");
 		out.append(v.round());
-		if (__effect_descriptions_modifier_is_percent[modifier] || modifier.contains_text("Percent"))
+		if (__effect_descriptions_modifier_is_percent[modifier_name] || modifier_name.contains_text("Percent"))
 			out.append("%");
 		out.append(" ");
-		if (__effect_descriptions_modifier_short_description_mapping contains modifier)
-			out.append(__effect_descriptions_modifier_short_description_mapping[modifier]);
+		if (__effect_descriptions_modifier_short_description_mapping contains modifier_name)
+			out.append(__effect_descriptions_modifier_short_description_mapping[modifier_name]);
 		else
 		{
-			string description = modifier;
+			string description = modifier_name;
 			if (description.contains_text(" Percent"))
 				description = description.replace_string(" Percent", "");
 			if (description.contains_text("Mysticality"))
@@ -5001,84 +5167,91 @@ buffer genieGenerateEffectDescription(effect e)
 	return out;
 }
 
+
+
+
 buffer genieGenerateDropdowns()
 {
-	buffer out;
-	out.append("<div style=\"display:table;width:100%;\"><div style=\"display:table-row;\">");
-	
+	DropdownGenerationEntry [int] dropdowns;
+		
 	if (get_property_int("_genieFightsUsed") < 3)
 	{
-		out.append("<div style=\"display:table-cell;\">To fight a</div>");
-	
-		out.append("<div style=\"display:table-cell;\">");
-		string [int] monster_descriptions;
-		string [int] monster_ids;
-		string [int] monster_replacement_images;
+		DropdownGenerationEntry dropdown;
+		dropdown.left_text = "To fight a";
+		dropdown.selection_div_id = "monster_selection_div";
+		dropdown.button_div_id = "monster_selection_button";
+		dropdown.button_text = "Go";
+		
+		
+		//string [int] monster_descriptions;
+		//string [int] monster_ids;
+		//string [int] monster_replacement_images;
 		foreach key, m in genieGenerateValidMonsterList()
 		{
 			if (m == $monster[none])
-				monster_descriptions[key] = "-------------";
+				dropdown.descriptions[key] = "-------------";
 			else
-				monster_descriptions[key] = m;
-			//monster_ids[key] = m.manuel_name.replace_string("\"", "&quot;");
-			monster_ids[key] = m.manuel_name.replace_string("\"", "\\\"");
+				dropdown.descriptions[key] = m;
+			//dropdown.ids[key] = m.manuel_name.replace_string("\"", "&quot;");
+			dropdown.ids[key] = m.manuel_name.replace_string("\"", "\\\"");
 		
 			string image = "images/" + imageFromMonster(m);
 			if (m != $monster[none])
-				monster_replacement_images[key] = image;
+				dropdown.replacement_images[key] = image;
 		}
-		out.append(generateSelectionDropdown(monster_descriptions, monster_ids, monster_replacement_images, "monster_selection_div"));
-		out.append("</div><div style=\"display:table-cell;\">");
-		out.append(generateButton("Go", "monster_selection_button", false));
-		out.append("</div></div><div style=\"display:table-row\">");
+		dropdowns[dropdowns.count()] = dropdown;
 	}
 	
-	string [int] effect_descriptions;
-	string [int] effect_ids;
-	string [int] blank;
-	foreach key, e in genieGenerateValidEffectList()
-	{
-		if (e == $effect[none])
-			effect_descriptions[key] = "-------------";
-		else
-			effect_descriptions[key] = genieGenerateEffectDescription(e);
-		effect_ids[key] = e;
-	}
 	
-	out.append("<div style=\"display:table-cell;padding-right:5px;\">For twenty turns of</div>");
-	out.append("<div style=\"display:table-cell;\">");
-	out.append(generateSelectionDropdown(effect_descriptions, effect_ids, blank, "effect_selection_div"));
-	out.append("</div><div style=\"display:table-cell;\">");
-	out.append(generateButton("Go", "effect_selection_button", false));
-	out.append("</div></div><div style=\"display:table-row\">");
-	
-	string [int] avatar_descriptions;
-	string [int] avatar_ids;
-	string [int] avatar_replacement_images;
-	foreach key, e in genieGenerateValidAvatarList()
+	if (true)
 	{
-		if (e == $effect[none])
-			avatar_descriptions[key] = "-------------";
-		else
-			avatar_descriptions[key] = e.string_modifier("Avatar");
-		avatar_ids[key] = e;
-		
-		monster m = e.string_modifier("Avatar").to_monster();
-		if (m != $monster[none])
+		DropdownGenerationEntry dropdown;
+		dropdown.left_text = "For twenty turns of";
+		dropdown.selection_div_id = "effect_selection_div";
+		dropdown.button_div_id = "effect_selection_button";
+		dropdown.button_text = "Go";
+		foreach key, e in genieGenerateValidEffectList()
 		{
-			string image = "images/" + imageFromMonster(m);
-			avatar_replacement_images[key] = image;
+			if (e == $effect[none])
+				dropdown.descriptions[key] = "-------------";
+			else
+				dropdown.descriptions[key] = genieGenerateEffectDescription(e);
+			dropdown.ids[key] = e;
 		}
+		dropdowns[dropdowns.count()] = dropdown;
 	}
-	out.append("<div style=\"display:table-cell;\">To look like a </div>");
-	out.append("<div style=\"display:table-cell;\">");
-	out.append(generateSelectionDropdown(avatar_descriptions, avatar_ids, avatar_replacement_images, "avatar_selection_div"));
-	out.append("</div><div style=\"display:table-cell;\">");
-	out.append(generateButton("Go", "avatar_selection_button", false));
-	out.append("</div>");
 	
-	out.append("</div></div>");
-	return out;
+	
+	if (true)
+	{
+		DropdownGenerationEntry dropdown;
+		dropdown.left_text = "To look like a ";
+		dropdown.selection_div_id = "avatar_selection_div";
+		dropdown.button_div_id = "avatar_selection_button";
+		dropdown.button_text = "Go";
+		
+		
+		foreach key, e in genieGenerateValidAvatarList()
+		{
+			if (e == $effect[none])
+				dropdown.descriptions[key] = "-------------";
+			else
+				dropdown.descriptions[key] = e.string_modifier("Avatar");
+			dropdown.ids[key] = e;
+		
+			monster m = e.string_modifier("Avatar").to_monster();
+			if (m != $monster[none])
+			{
+				string image = "images/" + imageFromMonster(m);
+				dropdown.replacement_images[key] = image;
+			}
+		}
+		
+		dropdowns[dropdowns.count()] = dropdown;
+	}
+	
+	
+	return dropdownGenerationGenerate(dropdowns);
 }
 
 buffer genieGenerateHardcodedWishes()
@@ -5134,10 +5307,10 @@ GenieScoreValueResult genieScoreAndValueForEffect(boolean [string] modifiers, ef
 	float value = 0.0; //FIXME muscle/myst/etc
 	
 	boolean first = true;
-	foreach modifier in modifiers
+	foreach modifier_name in modifiers
 	{
-		//if (!__modifiers_for_effect[e][modifier]) continue;
-		float modifier_value = e.numeric_modifier(modifier);
+		//if (!__modifiers_for_effect[e][modifier_name]) continue;
+		float modifier_value = e.numeric_modifier(modifier_name);
 		boolean skip = false;
 		foreach e2 in $elements[hot,stench,spooky,cold,sleaze]
 		{
@@ -5145,11 +5318,11 @@ GenieScoreValueResult genieScoreAndValueForEffect(boolean [string] modifiers, ef
 			string spell_damage_lookup = e2 + " Spell Damage";
 			if (maximum_minimum && modifiers[flat_damage_lookup] && modifiers[spell_damage_lookup])
 			{
-				if (modifier == flat_damage_lookup)
+				if (modifier_name == flat_damage_lookup)
 				{
 					modifier_value += e.numeric_modifier(spell_damage_lookup);
 				}
-				else if (modifier == spell_damage_lookup)
+				else if (modifier_name == spell_damage_lookup)
 				{
 					skip = true;
 					break;
@@ -5199,8 +5372,8 @@ GenieScoreValueResult genieScoreAndValueForEffect(boolean [string] modifiers, ef
 GenieBestEffectResult findBestEffectForModifiers(boolean [string] modifiers_in, boolean should_be_negative, boolean [effect] effects_we_can_obtain_otherwise, boolean [effect] valid_effects, boolean maximum_minimum)
 {
 	boolean [string] modifiers;
-	foreach modifier in modifiers_in
-		modifiers[modifier.to_lower_case()] = modifiers_in[modifier];
+	foreach modifier_name in modifiers_in
+		modifiers[modifier_name.to_lower_case()] = modifiers_in[modifier_name];
 	float best_effect_score = 0.0;
 	float best_effect_value = 0.0;
 	effect best_effect = $effect[none];
@@ -5275,10 +5448,10 @@ buffer genieGenerateNextEffectWishes()
 		entry.image = image;
 		return entry;
 	}
-	ModifierButtonEntry ModifierButtonEntryMake(string display_name, string modifier, int set, boolean is_percent, string image)
+	ModifierButtonEntry ModifierButtonEntryMake(string display_name, string modifier_name, int set, boolean is_percent, string image)
 	{
 		boolean [string] modifiers;
-		modifiers[modifier] = true;
+		modifiers[modifier_name] = true;
 		return ModifierButtonEntryMake(display_name, modifiers, set, is_percent, image);
 	}
 	void listAppend(ModifierButtonEntry [int] list, ModifierButtonEntry entry)

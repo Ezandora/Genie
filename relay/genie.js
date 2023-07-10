@@ -1,6 +1,6 @@
 var __relay_url = "choice.1267.ash";
 
-function genieButtonClicked(id, command, hash)
+function buttonClicked(id, command, hash)
 {
 	//choice.php?pwd=&option=1&whichchoice=1267&wish=the+wish
 	
