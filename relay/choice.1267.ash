@@ -2336,9 +2336,9 @@ static
     int PATH_GREY_GOO = 40;
 }
 
-float numeric_modifier_replacement(item it, string modifier)
+float numeric_modifier_replacement(item it, string mod)
 {
-    string modifier_lowercase = modifier.to_lower_case();
+    string modifier_lowercase = mod.to_lower_case();
     float additional = 0;
     if (my_path().id == PATH_G_LOVER && !it.contains_text("g") && !it.contains_text("G"))
     	return 0.0;
@@ -2368,7 +2368,7 @@ float numeric_modifier_replacement(item it, string modifier)
     	if (it.equipped_amount() == 0)
      	   additional += 5;
     }
-    return numeric_modifier(it, modifier) + additional;
+    return numeric_modifier(it, mod) + additional;
 }
 
 
@@ -2450,30 +2450,30 @@ static
     initialiseItems();
 }
 
-boolean [item] equipmentWithNumericModifier(string modifier)
+boolean [item] equipmentWithNumericModifier(string mod)
 {
-	modifier = modifier.to_lower_case();
+	mod = mod.to_lower_case();
     boolean [item] dynamic_items;
     dynamic_items[to_item("kremlin's greatest briefcase")] = true;
     dynamic_items[$item[your cowboy boots]] = true;
     dynamic_items[$item[a light that never goes out]] = true; //FIXME all smithsness items
-    if (!(__equipment_by_numeric_modifier contains modifier))
+    if (!(__equipment_by_numeric_modifier contains mod))
     {
         //Build it:
         boolean [item] blank;
-        __equipment_by_numeric_modifier[modifier] = blank;
+        __equipment_by_numeric_modifier[mod] = blank;
         foreach it in __equipment
         {
             if (dynamic_items contains it) continue;
-            if (it.numeric_modifier(modifier) != 0.0)
-                __equipment_by_numeric_modifier[modifier][it] = true;
+            if (it.numeric_modifier(mod) != 0.0)
+                __equipment_by_numeric_modifier[mod][it] = true;
         }
     }
     //Certain equipment is dynamic. Inspect them dynamically:
     boolean [item] extra_results;
     foreach it in dynamic_items
     {
-        if (it.numeric_modifier_replacement(modifier) != 0.0)
+        if (it.numeric_modifier_replacement(mod) != 0.0)
         {
             extra_results[it] = true;
         }
@@ -2482,7 +2482,7 @@ boolean [item] equipmentWithNumericModifier(string modifier)
     string secondary_modifier = "";
     foreach e in $elements[hot,cold,spooky,stench,sleaze]
     {
-        if (modifier == e + " damage")
+        if (mod == e + " damage")
             secondary_modifier = e + " spell damage";
     }
     if (secondary_modifier != "")
@@ -2492,11 +2492,11 @@ boolean [item] equipmentWithNumericModifier(string modifier)
     }
     
     if (extra_results.count() == 0)
-        return __equipment_by_numeric_modifier[modifier];
+        return __equipment_by_numeric_modifier[mod];
     else
     {
         //Add extras:
-        foreach it in __equipment_by_numeric_modifier[modifier]
+        foreach it in __equipment_by_numeric_modifier[mod]
         {
             extra_results[it] = true;
         }
@@ -3451,17 +3451,17 @@ float initiative_modifier_ignoring_plants()
 
 float item_drop_modifier_ignoring_plants()
 {
-    float modifier = item_drop_modifier();
+    float mod = item_drop_modifier();
     
     location my_location = my_location();
     if (my_location != $location[none])
     {
         if (my_location.locationHasPlant("Rutabeggar") || my_location.locationHasPlant("Stealing Magnolia"))
-            modifier -= 25.0;
+            mod -= 25.0;
         if (my_location.locationHasPlant("Kelptomaniac"))
-            modifier -= 40.0;
+            mod -= 40.0;
     }
-    return modifier;
+    return mod;
 }
 
 int monster_level_adjustment_ignoring_plants() //this is unsafe to use in heavy rains
@@ -4954,10 +4954,10 @@ buffer genieGenerateEffectDescription(effect e)
 	buffer out;
 	out.append(e);
 	boolean first = true;
-	//foreach modifier in __numeric_modifier_names
-	foreach modifier in __modifiers_for_effect[e]
+	//foreach mod in __numeric_modifier_names
+	foreach mod in __modifiers_for_effect[e]
 	{
-		float v = e.numeric_modifier(modifier);
+		float v = e.numeric_modifier(mod);
 		if (v == 0.0) continue;
 		if (first)
 		{
@@ -4971,14 +4971,14 @@ buffer genieGenerateEffectDescription(effect e)
 		if (v > 0)
 			out.append("+");
 		out.append(v.round());
-		if (__effect_descriptions_modifier_is_percent[modifier] || modifier.contains_text("Percent"))
+		if (__effect_descriptions_modifier_is_percent[mod] || mod.contains_text("Percent"))
 			out.append("%");
 		out.append(" ");
-		if (__effect_descriptions_modifier_short_description_mapping contains modifier)
-			out.append(__effect_descriptions_modifier_short_description_mapping[modifier]);
+		if (__effect_descriptions_modifier_short_description_mapping contains mod)
+			out.append(__effect_descriptions_modifier_short_description_mapping[mod]);
 		else
 		{
-			string description = modifier;
+			string description = mod;
 			if (description.contains_text(" Percent"))
 				description = description.replace_string(" Percent", "");
 			if (description.contains_text("Mysticality"))
@@ -5134,10 +5134,10 @@ GenieScoreValueResult genieScoreAndValueForEffect(boolean [string] modifiers, ef
 	float value = 0.0; //FIXME muscle/myst/etc
 	
 	boolean first = true;
-	foreach modifier in modifiers
+	foreach mod in modifiers
 	{
-		//if (!__modifiers_for_effect[e][modifier]) continue;
-		float modifier_value = e.numeric_modifier(modifier);
+		//if (!__modifiers_for_effect[e][mod]) continue;
+		float modifier_value = e.numeric_modifier(mod);
 		boolean skip = false;
 		foreach e2 in $elements[hot,stench,spooky,cold,sleaze]
 		{
@@ -5145,11 +5145,11 @@ GenieScoreValueResult genieScoreAndValueForEffect(boolean [string] modifiers, ef
 			string spell_damage_lookup = e2 + " Spell Damage";
 			if (maximum_minimum && modifiers[flat_damage_lookup] && modifiers[spell_damage_lookup])
 			{
-				if (modifier == flat_damage_lookup)
+				if (mod == flat_damage_lookup)
 				{
 					modifier_value += e.numeric_modifier(spell_damage_lookup);
 				}
-				else if (modifier == spell_damage_lookup)
+				else if (mod == spell_damage_lookup)
 				{
 					skip = true;
 					break;
@@ -5199,8 +5199,8 @@ GenieScoreValueResult genieScoreAndValueForEffect(boolean [string] modifiers, ef
 GenieBestEffectResult findBestEffectForModifiers(boolean [string] modifiers_in, boolean should_be_negative, boolean [effect] effects_we_can_obtain_otherwise, boolean [effect] valid_effects, boolean maximum_minimum)
 {
 	boolean [string] modifiers;
-	foreach modifier in modifiers_in
-		modifiers[modifier.to_lower_case()] = modifiers_in[modifier];
+	foreach mod in modifiers_in
+		modifiers[mod.to_lower_case()] = modifiers_in[mod];
 	float best_effect_score = 0.0;
 	float best_effect_value = 0.0;
 	effect best_effect = $effect[none];
@@ -5215,9 +5215,9 @@ GenieBestEffectResult findBestEffectForModifiers(boolean [string] modifiers_in, 
 			if (!valid_effects[e]) continue;
 			if (!e.effect_is_usable()) continue;
 			/*boolean relevant = false;
-			foreach modifier in modifiers
+			foreach mod in modifiers
 			{
-				if (__modifiers_for_effect[e][modifier])
+				if (__modifiers_for_effect[e][mod])
 				{
 					relevant = true;
 				}
@@ -5275,10 +5275,10 @@ buffer genieGenerateNextEffectWishes()
 		entry.image = image;
 		return entry;
 	}
-	ModifierButtonEntry ModifierButtonEntryMake(string display_name, string modifier, int set, boolean is_percent, string image)
+	ModifierButtonEntry ModifierButtonEntryMake(string display_name, string mod, int set, boolean is_percent, string image)
 	{
 		boolean [string] modifiers;
-		modifiers[modifier] = true;
+		modifiers[mod] = true;
 		return ModifierButtonEntryMake(display_name, modifiers, set, is_percent, image);
 	}
 	void listAppend(ModifierButtonEntry [int] list, ModifierButtonEntry entry)
@@ -5413,7 +5413,7 @@ buffer genieGenerateNextEffectWishes()
 	{
 		entries_per_set[entry.set] = entries_per_set[entry.set] + 1;
 	}
-	//foreach description, modifier in modifier_buttons
+	//foreach description, mod in modifier_buttons
 	int last_set = 0;
 	foreach key, entry in modifier_buttons
 	{
