@@ -18,7 +18,7 @@ function buttonClicked(id, command, hash)
 			
 			if (desired_target != "-1" && desired_target != "")
 			{
-				wish = "I was fighting a " + desired_target;
+				wish = "to fight a " + desired_target;
 			}
 		}
 		else if (id == "effect_selection_button" || id == "avatar_selection_button")

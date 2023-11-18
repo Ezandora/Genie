@@ -5388,9 +5388,9 @@ GenieBestEffectResult findBestEffectForModifiers(boolean [string] modifiers_in, 
 			if (!valid_effects[e]) continue;
 			if (!e.effect_is_usable()) continue;
 			/*boolean relevant = false;
-			foreach modifier in modifiers
+			foreach mod in modifiers
 			{
-				if (__modifiers_for_effect[e][modifier])
+				if (__modifiers_for_effect[e][mod])
 				{
 					relevant = true;
 				}
@@ -5586,7 +5586,7 @@ buffer genieGenerateNextEffectWishes()
 	{
 		entries_per_set[entry.set] = entries_per_set[entry.set] + 1;
 	}
-	//foreach description, modifier in modifier_buttons
+	//foreach description, mod in modifier_buttons
 	int last_set = 0;
 	foreach key, entry in modifier_buttons
 	{

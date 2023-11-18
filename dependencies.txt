@@ -1,1 +1,1 @@
-https://github.com/Ezandora/Choice-Override/branches/Release/
+github Ezandora/Choice-Override Release
