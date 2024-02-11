@@ -8,7 +8,7 @@ Installation
 ----------------
 Run this command in the graphical CLI in KoLmafia:
 <pre>
-svn checkout https://github.com/Ezandora/Genie/branches/Release/
+git checkout https://github.com/Ezandora/Genie.git
 </pre>
 Then restart mafia, maybe.
 
